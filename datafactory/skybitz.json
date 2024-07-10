@@ -1,0 +1,76 @@
+{
+    "name": "skybitz",
+    "objectId": "db9816cb-7ddb-4bcd-a4c8-93988edff3e4",
+    "properties": {
+        "activities": [
+            {
+                "name": "skybitz_TrailerLocations",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "queryTimeout": "02:00:00",
+                        "isolationLevel": "ReadUncommitted",
+                        "partitionOption": "None",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "type": "SqlServerTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "schema": "skybitz",
+                                "table": "TrailerLocations",
+                                "database": "dw_pubRF"
+                            },
+                            "externalReferences": {
+                                "connection": "b2975132-0865-4abf-bb9b-1f6a44f949aa"
+                            }
+                        }
+                    },
+                    "sink": {
+                        "type": "KustoDatabaseSink",
+                        "ingestionMappingName": "",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "eventhouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "KustoDatabase",
+                                    "typeProperties": {
+                                        "workspaceId": "a7b0fd30-da02-4a3a-970b-8041d2cb9a47",
+                                        "endpoint": "https://trd-6qvum6py8ygwgbhmu7.z0.kusto.fabric.microsoft.com",
+                                        "database": "f2225e74-2418-4e30-bac8-cd02eabb9761"
+                                    }
+                                }
+                            },
+                            "type": "KustoDatabaseTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "table": "skybitz_TrailerLocations"
+                            }
+                        }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                }
+            }
+        ],
+        "lastModifiedByObjectId": "242268c9-af14-4b3a-bfa1-50a8e45de0fc",
+        "lastPublishTime": "2024-07-01T20:02:42Z"
+    }
+}
