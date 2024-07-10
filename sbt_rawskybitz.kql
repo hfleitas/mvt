@@ -1,0 +1,94 @@
+////////////////
+// rawskybitz //
+////////////////
+
+//***********************************************************************************************************
+// Here are two articles to help you get started with KQL:
+// KQL reference guide - https://aka.ms/KQLguide
+// SQL - KQL conversions - https://aka.ms/sqlcheatsheet
+//***********************************************************************************************************
+
+// Use "take" to view a sample number of records in the table and check the data.
+YOUR_TABLE_HERE
+| take 100
+
+// See how many records are in the table.
+YOUR_TABLE_HERE
+| count
+
+// This query returns the number of ingestions per hour in the given table.
+YOUR_TABLE_HERE
+| summarize IngestionCount = count() by bin(ingestion_time(), 1h)
+
+
+['rawskybitz'] 
+| take 10
+
+rawskybitz
+| count
+
+
+let full=rawskybitz
+| count;
+rawskybitz
+| project tostring(data)
+| distinct data
+| count
+| union full
+
+
+.show ingestion failures 
+
+.show streamingingestion failures
+
+.show table rawskybitz extents
+
+.show table rawskybitz rowstores
+
+
+
+// update policy - kql function 
+
+
+rawskybitz
+| count //336886
+
+rawplatsci
+| count //958763
+
+.show ingestion failures | summarize max(FailedOn) by Table //2024-06-28T14:40:50.4780878Z
+
+.show ingestion failures 
+
+
+
+///////////////
+// fix table //
+///////////////
+
+//fix table to string
+
+.set temp <| rawskybitz | project data=tostring(data)
+
+temp
+| count //5079
+
+rawskybitz
+| count //5079 
+
+.drop table rawskybitz
+
+//configured streaming connection & ingestion mapping
+
+// not required messages were still retained in eventstream
+// .append rawskybitz <| temp 
+
+
+.drop table temp ifexists
+
+
+.show table rawskybitz cslschema 
+
+
+
+.alter table rawskybitz (data:string) with (folder='raw')
