@@ -3,12 +3,15 @@ skybitz_TrailerLocations
 | summarize max(sbt_messagetimestampmst) //2024-06-24T21:08:10Z
 
 skybitz_TrailerLocations
-| where sbt_messagetimestampmst > datetime('7/9/2024') and sbt_messagetimestampmst < datetime('7/10/2024')
-| summarize min(sbt_messagetimestampmst) //2024-07-09T00:07:20Z or 2024-07-09T04:52:41Z?
+// | where sbt_messagetimestampmst > datetime('7/9/2024') and sbt_messagetimestampmst < datetime('7/10/2024')
+| where ingestion_time() > datetime('7/9/2024') and ingestion_time() < datetime('7/10/2024')
+// | summarize min(sbt_messagetimestampmst) //2024-07-09T00:07:20Z or 2024-07-09T04:52:41Z?
 // | summarize min(ingestion_time())
+| summarize count() by bin(ingestion_time(),1s)
+| summarize min($IngestionTime) //2024-07-09T19:41:15Z <--- THIS!
 
 skybitz_TrailerLocations
-| where ingestion_time() =='2024-07-09T19:41:15.2353787Z'
+| where ingestion_time() =='2024-07-09T19:41:15.2353787Z' // <--- THIS!
 
 skybitz_TrailerLocations
 | where sbt_messagetimestampmst > datetime('6/20/2024') 
@@ -34,29 +37,178 @@ rawskybitz
 | summarize min(sbt_messagetimestampmst) //2024-06-18T21:56:52Z
 
 
-// .append async table <|
+// .append async table with(tag='sync from raw')) <|
 // rawTable
 // | where startofday(Timestamp) == datetime(2024-06-24)
 // | <rest of update policy query>
 
+// 6/24/24
+//1. data is dup from pipeline 
+//2. data is dup from sync but tagged
+// extend the tag 
+// use ingestion_time in arg_max() to elimiate the dups in a function or matview
 
-// .append async skybitz_TrailerLocations <|
 
-let _startmst=datetime('2024-06-24T21:08:10Z');
-let _endmst=datetime('2024-06-25T21:08:10Z');// let endmst=datetime('2024-07-09T04:52:41Z');
+// .append async skybitz_TrailerLocations with (tag='append 2024-06-24T21:08:10Z .. 2024-06-25T21:08:10Z') <|
+// let _startmst=datetime('2024-06-24T21:08:10Z');
+// let _endmst=datetime('2024-06-25T21:08:10Z');// let endmst=datetime('2024-07-09T04:52:41Z'); <--- THIS!
+// | where ingestion_time() between (datetime_local_to_utc(_startmst, 'US/Mountain') .. datetime_local_to_utc(_endmst, 'US/Mountain'))
+
+
+//full: 1228100
+// 02760ba3-c927-477c-a136-3ad23a7e6341
+// 8968daae-28e3-4210-836a-0c226b166292
+// f7a226f3-5f7f-4015-b20b-479e1c44f8ab
+// abac5ab2-1ec6-4b01-9337-852ba6926b27
+// 464ffb4a-4d47-4fea-b642-345a32ce2192
+// 1b4dd6bc-8579-4e48-8839-c9b1f446eef5
+// 6fa4de48-93bb-417d-a019-e7c07d810aea
+// 653b6908-eae0-437c-9307-b21d34741241
+// 1db890c1-5e44-4dfd-9253-28c192b6fe1b
+// f5a2b507-5a9f-4e13-b5dd-294a70307c95
+// f8d8ae8c-0639-4d4b-9956-11478bc2f6d2
+// c88a2f8f-67f4-4292-ad30-642aecc7d4cd
+// f5e859ca-2525-4e23-8c30-986e2ad292c7
+
+.append async skybitz_TrailerLocations with (tags='["append 2024-07-09"]') <|
 rawskybitz
-| where ingestion_time() between (datetime_local_to_utc(_startmst, 'US/Mountain') .. datetime_local_to_utc(_endmst, 'US/Mountain'))
+| where ingestion_time() between (startofday(datetime(2024-07-09)) .. endofday(datetime(2024-07-09)))
 | extend payload=parse_xml(data)
 | project-away data
-// | count //76073, full: 1228100
-| extend ts=tostring(payload.skybitz.gls.['time'])
+| extend 
+    sbt_mtsn=tostring(payload.skybitz.gls.mtsn),
+    sbt_assetid=tostring(payload.skybitz.gls.asset.assetid),
+    sbt_messagetype=tostring(payload.skybitz.gls.messagetype),
+    ts=tostring(payload.skybitz.gls.['time']),
+    binary=todynamic(payload.skybitz.gls.binary),
+    sbt_extpwr=toint(payload.skybitz.gls.extpwr),
+    serial=todynamic(payload.skybitz.gls.serial),
+    sbt_latitude=todecimal(payload.skybitz.gls.latitude),
+    sbt_longitude=todecimal(payload.skybitz.gls.longitude),
+    sbt_battery=tostring(payload.skybitz.gls.battery),
+    sbt_quality=toint(payload.skybitz.gls.quality),
+    sbt_geoname=tostring(payload.skybitz.gls.landmark.geoname),
+    sbt_city=tostring(payload.skybitz.gls.landmark.city),
+    sbt_state=tostring(payload.skybitz.gls.landmark.state),
+    sbt_country=tostring(payload.skybitz.gls.landmark.country),
+    sbt_geotypename=tostring(payload.skybitz.gls.landmark.geotypename),
+    sbt_idlestatus=tostring(payload.skybitz.gls.idle.idlestatus),
+    sbt_idleduration=todecimal(payload.skybitz.gls.idle.idleduration),
+    sbt_idlegap=todecimal(payload.skybitz.gls.idle.idlegap),
+    sbt_skyfencestatus=tostring(payload.skybitz.gls.skyfence.skyfencestatus),
+    sbt_speed=tostring(payload.skybitz.gls.speed),
+    sbt_heading=tostring(payload.skybitz.gls.heading),
+    sbt_transid=tostring(payload.skybitz.gls.transid),
+    etl_timestampUTC=ingestion_time()
 //fix ts
 | parse ts with ts_year:long "/" ts_month:long "/" ts_day:long " " ts_hour:long ":" ts_minute:long ":" ts_second:long
 | extend ts = make_datetime(ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second)
 | extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
 | project-away ts, ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second
-| where sbt_messagetimestampmst <= _endmst
-// | count //76073
+//binary
+// In case array_length is null, its a single entry so we convert it to array.
+| extend binary = parse_json(case(isnull(array_length(binary)), pack_array(binary), binary))
+| mv-apply binary to typeof(dynamic) on
+(
+    project sbt_tetherstate=case(binary.inputname == "Tether", binary.inputstate, dynamic(null)),
+            sbt_tirestate=case(binary.inputname == "Tire System", binary.inputstate, dynamic(null))
+    | summarize take_any(tostring(sbt_tetherstate)), take_any(tostring(sbt_tirestate))
+)
+//serial
+| extend serial = parse_json(case(isnull(array_length(serial)), pack_array(serial), serial))
+| mv-apply serial to typeof(dynamic) on
+(
+    project sbt_movementstate=case(serial.serialname == "Motion", serial.serialdata, dynamic(null)),
+            sbt_cargostate=case(serial.serialname == "Cargo" or serial.serialname == "Volumetric", serial.serialdata, dynamic(null))
+    | summarize take_any(tostring(sbt_movementstate)), take_any(tostring(sbt_cargostate))
+)
+| project 
+    sbt_mtsn, 
+    sbt_assetid, 
+    sbt_messagetype,
+    sbt_messagetimestampmst,
+    sbt_tetherstate,
+    sbt_tirestate,
+    sbt_extpwr,
+    sbt_movementstate,
+    sbt_cargostate,
+    sbt_latitude,
+    sbt_longitude,
+    sbt_battery,
+    sbt_quality,
+    sbt_geoname,
+    sbt_city,
+    sbt_state,
+    sbt_country,
+    sbt_geotypename,
+    sbt_idlestatus,
+    sbt_idleduration,
+    sbt_idlegap,
+    sbt_skyfencestatus,
+    sbt_speed,
+    sbt_heading,
+    sbt_transid,
+    etl_timestampUTC,
+    CurrentRow=toint(0)
 
 
+.show operations | where OperationId =='2136ecdb-82a2-4d55-83cb-560257f939f4' //failed due to tag
 
+.show operations | where OperationId =='216ae35d-e3a3-4cc1-9c9b-3cf9d95e0ec0' //failed due to tags not a collection
+
+.show operations | where OperationId =='f5e859ca-2525-4e23-8c30-986e2ad292c7'
+
+.show operation f5e859ca-2525-4e23-8c30-986e2ad292c7 details
+
+.show operations | where OperationId in(
+'02760ba3-c927-477c-a136-3ad23a7e6341',
+'8968daae-28e3-4210-836a-0c226b166292',
+'f7a226f3-5f7f-4015-b20b-479e1c44f8ab',
+'abac5ab2-1ec6-4b01-9337-852ba6926b27',
+'464ffb4a-4d47-4fea-b642-345a32ce2192',
+'1b4dd6bc-8579-4e48-8839-c9b1f446eef5',
+'6fa4de48-93bb-417d-a019-e7c07d810aea',
+'653b6908-eae0-437c-9307-b21d34741241',
+'1db890c1-5e44-4dfd-9253-28c192b6fe1b',
+'f5a2b507-5a9f-4e13-b5dd-294a70307c95',
+'f8d8ae8c-0639-4d4b-9956-11478bc2f6d2',
+'c88a2f8f-67f4-4292-ad30-642aecc7d4cd',
+'f5e859ca-2525-4e23-8c30-986e2ad292c7')
+| summarize dcount(OperationId) by State //13 inprogress & completed ?
+
+print datetime_diff('day',datetime(6/25/24), datetime(7/9/24))
+
+.show table skybitz_TrailerLocations extents 
+| where isnotempty(Tags)
+
+// topics:
+// 1. connect from c-sharp app pull data/read, etc. 
+// 2. app 1 > service bus > subs > app 2 main to sql db (compares to decide activity) 
+    // ie. arrive/depart using geofence table current row vs prev row. > app 2 > service bus topic depart/arrived > subs > tbd... another table with field of depart/arrive.
+    // border crossing, etc.
+    // CurrentRow is 1 for every trailer (prev row), gets updated to 0 and next row as 1.
+
+datatable (d:datetime)[
+datetime(2024-06-29),
+datetime(2024-06-26),
+datetime(2024-06-30),
+datetime(2024-06-27),
+datetime(2024-06-25),
+datetime(2024-06-28),
+datetime(2024-07-03),
+datetime(2024-07-09),
+datetime(2024-07-08),
+datetime(2024-07-07),
+datetime(2024-07-04),
+datetime(2024-07-05),
+datetime(2024-07-06),
+datetime(2024-07-02),
+datetime(2024-07-01)
+] | sort by d //15 days
+
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime('6/20/2024')
+| extend t=extent_tags()
+| where t has 'append'
+| summarize count() by tostring(t)
+| summarize sum(count_), sum(array_length(todynamic(t))) //1378960 rows, 15days! 😁
