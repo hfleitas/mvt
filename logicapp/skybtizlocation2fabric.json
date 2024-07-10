@@ -1,0 +1,76 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Send_event": {
+                "inputs": {
+                    "body": {
+                        "ContentData": "@{triggerBody()?['ContentData']}"
+                    },
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['eventhubs-1']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/@{encodeURIComponent('es_f3349ad6-4978-4b5a-8d8b-d4c8400c6315')}/events"
+                },
+                "runAfter": {},
+                "type": "ApiConnection"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "When_one_or_more_messages_arrive_in_a_topic_(auto-complete)": {
+                "evaluatedRecurrence": {
+                    "frequency": "Minute",
+                    "interval": 3,
+                    "timeZone": "Mountain Standard Time"
+                },
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['servicebus']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/@{encodeURIComponent(encodeURIComponent('locationtopic'))}/subscriptions/@{encodeURIComponent('FabricEventstream')}/messages/batch/head",
+                    "queries": {
+                        "maxMessageCount": 20,
+                        "subscriptionType": "Main"
+                    }
+                },
+                "recurrence": {
+                    "frequency": "Minute",
+                    "interval": 3,
+                    "timeZone": "Mountain Standard Time"
+                },
+                "splitOn": "@triggerBody()",
+                "type": "ApiConnection"
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "eventhubs-1": {
+                    "connectionId": "/subscriptions/97df9c78-8d5c-4b23-af84-fcd17bfcae65/resourceGroups/rg-skybitzlistener-prod-w2/providers/Microsoft.Web/connections/eventhubs-1",
+                    "connectionName": "eventhubs-1",
+                    "id": "/subscriptions/97df9c78-8d5c-4b23-af84-fcd17bfcae65/providers/Microsoft.Web/locations/westus2/managedApis/eventhubs"
+                },
+                "servicebus": {
+                    "connectionId": "/subscriptions/97df9c78-8d5c-4b23-af84-fcd17bfcae65/resourceGroups/rg-skybitzlistener-prod-w2/providers/Microsoft.Web/connections/servicebus",
+                    "connectionName": "servicebus",
+                    "id": "/subscriptions/97df9c78-8d5c-4b23-af84-fcd17bfcae65/providers/Microsoft.Web/locations/westus2/managedApis/servicebus"
+                }
+            }
+        }
+    }
+}
