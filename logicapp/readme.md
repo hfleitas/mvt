@@ -1,0 +1,1 @@
+LogicApps are Consumption model
