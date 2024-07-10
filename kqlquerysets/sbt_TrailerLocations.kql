@@ -1,0 +1,119 @@
+// DML/DDL
+// DML = KQL Query
+// DDL = Control Command
+
+.alter table mytable (mycolumn:string) with (folder='skytibz')
+
+.drop table mytable2 ifexists //shift+enter
+
+explain
+select * from mytable
+
+TDS endpoint connect 1433 readonly https query 433
+
+.create table skybitz_TrailerLocations (
+sbt_mtsn:string,
+sbt_assetid:string,
+sbt_messagetype:string,
+sbt_messagetimestampmst:datetime,
+sbt_tetherstate:string,
+sbt_tirestate:string,
+sbt_extpwr:int,
+sbt_movementstate:string,
+sbt_cargostate:string,
+sbt_latitude:decimal,
+sbt_longitude:decimal,
+sbt_battery:string,
+sbt_quality:int,
+sbt_geoname:string,
+sbt_city:string,
+sbt_state:string,
+sbt_country:string,
+sbt_geotypename:string,
+sbt_idlestatus:string,
+sbt_idleduration:decimal,
+sbt_idlegap:decimal,
+sbt_skyfencestatus:string,
+sbt_speed:string,
+sbt_heading:string,
+sbt_transid:string,
+etl_timestampUTC:datetime,
+CurrentRow:int
+) with (folder='skybitz')
+
+skybitz_TrailerLocations
+| getschema 
+
+skybitz_TrailerLocations
+| count
+
+
+print r=toreal(-99.188380000), d=todecimal(-99.188380000)
+| getschema 
+
+
+19.6652900000	-99.1883800000
+19.6652900000	-99.1883800000
+19.6652900000	-99.1883800000
+31.6640000000	-106.3420200000
+27.3905100000	-99.5513400000
+
+
+
+// locking, transaction > write. latency high-through //append-only
+
+CPU/SSD/RAM + azure blob storage ratio. 3TB
+
+CPU/RAM ratio. small SSD
+
+
+//explain
+CREATE TABLE [skybitz].[TrailerLocations](
+	[sbt_mtsn] [nvarchar](25) NOT NULL,
+	[sbt_assetid] [nvarchar](12) NOT NULL,
+	[sbt_messagetype] [nvarchar](30) NULL,
+	[sbt_messagetimestampmst] [datetime2](7) NOT NULL,
+	[sbt_tetherstate] [nvarchar](12) NULL,
+	[sbt_tirestate] [nvarchar](10) NULL,
+	[sbt_extpwr] [tinyint] NULL,
+	[sbt_movementstate] [nvarchar](12) NULL,
+	[sbt_cargostate] [nvarchar](12) NULL,
+	[sbt_latitude] [decimal](29, 10) NULL,
+	[sbt_longitude] [decimal](29, 10) NULL,
+	[sbt_battery] [nvarchar](3) NULL,
+	[sbt_quality] [tinyint] NULL,
+	[sbt_geoname] [nvarchar](60) NULL,
+	[sbt_city] [char](50) NULL,
+	[sbt_state] [char](2) NULL,
+	[sbt_country] [nvarchar](3) NULL,
+	[sbt_geotypename] [nvarchar](60) NULL,
+	[sbt_idlestatus] [nvarchar](10) NULL,
+	[sbt_idleduration] [decimal](29, 10) NULL,
+	[sbt_idlegap] [decimal](29, 10) NULL,
+	[sbt_skyfencestatus] [nvarchar](24) NULL,
+	[sbt_speed] [nvarchar](10) NULL,
+	[sbt_heading] [char](2) NULL,
+	[sbt_transid] [nvarchar](15) NOT NULL,
+	[etl_timestampUTC] [datetime] NOT NULL,
+	[CurrentRow] [tinyint] NOT NULL,
+CONSTRAINT [PK_TrailerLocations_sbt_assetid_sbt_messagetimestampmst_sbt_transid] PRIMARY KEY CLUSTERED 
+(
+	[sbt_assetid] ASC,
+	[sbt_messagetimestampmst] ASC,
+	[sbt_transid] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+)
+GO
+ 
+ALTER TABLE [skybitz].[TrailerLocations] ADD  DEFAULT (getutcdate()) FOR [etl_timestampUTC]
+GO
+ 
+ALTER TABLE [skybitz].[TrailerLocations] ADD  DEFAULT ((0)) FOR [CurrentRow]
+GO
+
+
+skybitz_TrailerLocations
+| count
+
+skybitz_TrailerLocations
+| distinct sbt_idlegap
