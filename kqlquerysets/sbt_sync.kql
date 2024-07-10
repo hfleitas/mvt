@@ -1,0 +1,62 @@
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime('6/20/2024') and sbt_messagetimestampmst < datetime('6/25/2024')
+| summarize max(sbt_messagetimestampmst) //2024-06-24T21:08:10Z
+
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime('7/9/2024') and sbt_messagetimestampmst < datetime('7/10/2024')
+| summarize min(sbt_messagetimestampmst) //2024-07-09T00:07:20Z or 2024-07-09T04:52:41Z?
+// | summarize min(ingestion_time())
+
+skybitz_TrailerLocations
+| where ingestion_time() =='2024-07-09T19:41:15.2353787Z'
+
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime('6/20/2024') 
+| summarize count() by bin(sbt_messagetimestampmst,1d)
+| sort by sbt_messagetimestampmst desc 
+| render timechart 
+
+
+rawskybitz
+| summarize min(datetime_utc_to_local(ingestion_time(),'US/Mountain')) //UTC: 2024-06-25T15:08:38.600705Z, MST: 2024-06-25T09:08:38.600705Z
+
+
+rawskybitz
+| where ingestion_time() == '2024-06-25T15:08:38.600705Z'
+| extend payload=parse_xml(data)
+| project-away data
+| extend ts=tostring(payload.skybitz.gls.['time'])
+//fix ts
+| parse ts with ts_year:long "/" ts_month:long "/" ts_day:long " " ts_hour:long ":" ts_minute:long ":" ts_second:long
+| extend ts = make_datetime(ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second)
+| extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
+| project-away ts, ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second
+| summarize min(sbt_messagetimestampmst) //2024-06-18T21:56:52Z
+
+
+// .append async table <|
+// rawTable
+// | where startofday(Timestamp) == datetime(2024-06-24)
+// | <rest of update policy query>
+
+
+// .append async skybitz_TrailerLocations <|
+
+let _startmst=datetime('2024-06-24T21:08:10Z');
+let _endmst=datetime('2024-06-25T21:08:10Z');// let endmst=datetime('2024-07-09T04:52:41Z');
+rawskybitz
+| where ingestion_time() between (datetime_local_to_utc(_startmst, 'US/Mountain') .. datetime_local_to_utc(_endmst, 'US/Mountain'))
+| extend payload=parse_xml(data)
+| project-away data
+// | count //76073, full: 1228100
+| extend ts=tostring(payload.skybitz.gls.['time'])
+//fix ts
+| parse ts with ts_year:long "/" ts_month:long "/" ts_day:long " " ts_hour:long ":" ts_minute:long ":" ts_second:long
+| extend ts = make_datetime(ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second)
+| extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
+| project-away ts, ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second
+| where sbt_messagetimestampmst <= _endmst
+// | count //76073
+
+
+
