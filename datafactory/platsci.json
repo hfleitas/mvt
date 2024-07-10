@@ -1,0 +1,78 @@
+{
+    "name": "platsci",
+    "objectId": "8cca3899-43ae-4b6e-9a30-e630fa2079ab",
+    "properties": {
+        "activities": [
+            {
+                "name": "platsci_TelematicHeartbeats",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "Select \nTelematicHeartbeats_ID,\nData_Id,\nUnit_Number,\nUnit_VIN,\nDriver_Code,\nCvd_Id,\nTablet_Serial,\nEvent,\nLogged_At_UTC,\nLogged_At_MT,\nHeartbeat_Id,\nSpeed,\nOdometer,\nOdometer_Jump,\nHeading,\nIgnition,\nRPM,\nEngine_Hours,\nEngine_Hours_Jump,\nWheels_In_Motion,\nAccuracy,\nSatellites,\nGPS_Valid,\nHDOP,\nFuel_Level,\nTotal_Fuel_Used,\nGPS_Latitude,\nGPS_Longitude,\nGPS_Description,\nGPS_GeoPoint = cast(GPS_GeoPoint as varchar(max)),\nMessage_Id,\nConsumer_Version,\nOrigin_Version,\nTimestamp,\nIgnore_Data_Flag,\nETL_Load_Date_MT,\nETL_DW_PubRF_Load_Date,\nGPS_State\nfrom platsci.TelematicHeartbeats with(nolock)",
+                        "queryTimeout": "02:00:00",
+                        "isolationLevel": "ReadUncommitted",
+                        "partitionOption": "None",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "type": "SqlServerTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "schema": "platsci",
+                                "table": "TelematicHeartbeats",
+                                "database": "dw_pubRF"
+                            },
+                            "externalReferences": {
+                                "connection": "b2975132-0865-4abf-bb9b-1f6a44f949aa"
+                            }
+                        }
+                    },
+                    "sink": {
+                        "type": "LakehouseTableSink",
+                        "tableActionOption": "OverwriteSchema",
+                        "partitionOption": "None",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "Lakehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "Lakehouse",
+                                    "typeProperties": {
+                                        "workspaceId": "a7b0fd30-da02-4a3a-970b-8041d2cb9a47",
+                                        "artifactId": "4b363cd9-30c8-4f58-a195-34a8c3cfe7f6",
+                                        "rootFolder": "Tables"
+                                    }
+                                }
+                            },
+                            "type": "LakehouseTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "table": "platsci_TelematicHeartbeats"
+                            }
+                        }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                }
+            }
+        ],
+        "lastModifiedByObjectId": "242268c9-af14-4b3a-bfa1-50a8e45de0fc",
+        "lastPublishTime": "2024-07-01T21:04:22Z"
+    }
+}
