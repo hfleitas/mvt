@@ -1,0 +1,251 @@
+///////////////
+// parse_xml //
+///////////////
+
+// https://learn.microsoft.com/en-us/azure/data-explorer/kusto/query/parse-xml-function
+
+// Source
+<?xml version="1.0" encoding="UTF-8"?>
+<duration>
+    <value>118.0</value>
+    <count>5.0</count>
+    <min>100.0</min>
+    <max>150.0</max>
+    <stdDev>0.0</stdDev>
+    <sampledValue>118.0</sampledValue>
+    <sum>118.0</sum>
+</duration>
+
+// Parsed output
+{
+    "duration": {
+        "value": 118.0,
+        "count": 5.0,
+        "min": 100.0,
+        "max": 150.0,
+        "stdDev": 0.0,
+        "sampledValue": 118.0,
+        "sum": 118.0
+    }
+}
+
+let T = datatable(context_custom_metrics:string)[
+```<?xml version="1.0" encoding="UTF-8"?>
+<duration>
+    <value>118.0</value>
+    <count>5.0</count>
+    <min>100.0</min>
+    <max>150.0</max>
+    <stdDev>0.0</stdDev>
+    <sampledValue>118.0</sampledValue>
+    <sum>118.0</sum>
+</duration>```
+];
+T
+| extend d=parse_xml(context_custom_metrics) 
+| extend duration_value=d.duration.value, duration_min=d["duration"]["min"]
+
+
+rawskybitz
+| take 10
+
+//rawskybitz one row
+let T = datatable(data:string)[
+```<?xml version="1.0" encoding="utf-8"?><!DOCTYPE skybitz [<!ELEMENT skybitz (error, (gls | profile | setup |checkstatus)*)><!ELEMENT error (#PCDATA)><!ELEMENT gls (mtsn, asset?, messagetype, binary*, extpwr?, serial*, latitude?, longitude?, speed?, heading?, headingindegrees?, journeydistance?, totaldevicemileage?, temperaturecelsius?, temperaturefahrenheit?, battery?, time, quality?, landmark?, address?, skyfence?, idle?, epmflag?,ehmeter?,ehcounter?,ats?, reeferstate?, transid?)><!ELEMENT mtsn (#PCDATA)><!ELEMENT asset (assetid,tractorid?, assettype, owner)><!ELEMENT assetid (#PCDATA)><!ELEMENT tractorid (#PCDATA)><!ELEMENT assettype (#PCDATA)><!ELEMENT owner (#PCDATA)><!ELEMENT messagetype (#PCDATA)><!ELEMENT binary (inputname, inputid, event?, inputval?, inputstate?, timeofreading?)><!ELEMENT inputid (#PCDATA)><!ELEMENT inputname (#PCDATA)><!ELEMENT inputval (#PCDATA)><!ELEMENT inputstate (#PCDATA)><!ELEMENT timeofreading (#PCDATA)><!ELEMENT event (#PCDATA)><!ELEMENT extpwr (#PCDATA)><!ELEMENT serial (serialtype, serialid, serialname, serialdata, event?)><!ELEMENT serialtype (#PCDATA)><!ELEMENT serialid (#PCDATA)><!ELEMENT serialname (#PCDATA)><!ELEMENT serialdata (#PCDATA)><!ELEMENT latitude (#PCDATA)><!ELEMENT longitude (#PCDATA)><!ELEMENT battery (#PCDATA)><!ELEMENT time (#PCDATA)><!ELEMENT quality (#PCDATA)><!ELEMENT landmark (geoname, locationid?, city?, state, country, distance, direction, geotypename)><!ELEMENT address (street?, city?, state?, country?, postal?)><!ELEMENT geoname (#PCDATA)><!ELEMENT city (#PCDATA)><!ELEMENT state (#PCDATA)><!ELEMENT country (#PCDATA)><!ELEMENT street (#PCDATA)><!ELEMENT postal (#PCDATA)><!ELEMENT distance (#PCDATA)><!ELEMENT direction (#PCDATA)><!ELEMENT geotypename (#PCDATA)><!ELEMENT idle (idlestatus, idleduration?, idlegap?)><!ELEMENT idlestatus (#PCDATA)><!ELEMENT idleduration (#PCDATA)><!ELEMENT idlegap (#PCDATA)><!ELEMENT epmflag (#PCDATA)><!ELEMENT ehmeter (#PCDATA)><!ELEMENT ehcounter (#PCDATA)><!ELEMENT ats (lsd, meridian, township,range,section)><!ELEMENT lsd (#PCDATA)><!ELEMENT meridian (#PCDATA)><!ELEMENT township (#PCDATA)><!ELEMENT range (#PCDATA)><!ELEMENT section (#PCDATA)><!ELEMENT profile (mtsn, asset?, profiletype, profilenum, profileid, profilepwr, profilestatus, time, lastupdate?, expiration?, nextaction?, transid?)><!ELEMENT profiletype (#PCDATA)><!ELEMENT profilenum (#PCDATA)><!ELEMENT profileid (#PCDATA)><!ELEMENT profilepwr (#PCDATA)><!ELEMENT profilestatus (#PCDATA)><!ELEMENT lastupdate (#PCDATA)><!ELEMENT expiration (#PCDATA)><!ELEMENT nextaction (#PCDATA)> <!ELEMENT setup (assettypedef*)><!ELEMENT assettypedef (assettype,assettypebase,customassettype,length*,height*,rooftype*,note*)><!ELEMENT assettypebase (#PCDATA)><!ELEMENT customassettype (#PCDATA)><!ELEMENT length (#PCDATA)><!ELEMENT height (#PCDATA)><!ELEMENT rooftype (#PCDATA)><!ELEMENT note (#PCDATA)><!ELEMENT reeferstate (reefermake, interfacetype, contenttype, controlleron, fuelpercent?, assetbatteryvoltage?, engineon?, enginemode?, enginesize?, enginespeed?, enginerunhours?, engineswitchonhours?, enginestandbyhours?, reeferoperatingstatus?, reeferalarmstatus?, activeprofileslotnumber?, ambienttemperature?, modezone1?, setpointtemperaturezone1?, supplyairtemperaturezone1?, returnairtemperaturezone1?, modezone2?, setpointtemperaturezone2?, returnairtemperaturezone2?, modezone3?, setpointtemperaturezone3?, returnairtemperaturezone3?, reeferremotetemperaturesensor1?, reeferremotetemperaturesensor2?, reeferremotetemperaturesensor3?,  doorstateopen?, doorswitchopen?, remoteswitch1open?, remoteswitch2open?, remotetemperaturesensor1?, remotetemperaturesensor2?, remotetemperaturesensor3?)><!ELEMENT reeferalarmstatus (reeferalarmtype, reeferalarm*)><!ELEMENT reeferalarm (alarmid, alarmactive, alarmdescr?)><!ELEMENT reefermake (#PCDATA)><!ELEMENT interfacetype (#PCDATA)><!ELEMENT contenttype (#PCDATA)><!ELEMENT controlleron (#PCDATA)><!ELEMENT fuelpercent (#PCDATA)><!ELEMENT assetbatteryvoltage (#PCDATA)><!ELEMENT engineon (#PCDATA)><!ELEMENT enginemode (#PCDATA)><!ELEMENT enginesize (#PCDATA)><!ELEMENT enginespeed (#PCDATA)><!ELEMENT enginerunhours (#PCDATA)><!ELEMENT engineswitchonhours (#PCDATA)><!ELEMENT enginestandbyhours (#PCDATA)><!ELEMENT reeferoperatingstatus (#PCDATA)><!ELEMENT activeprofileslotnumber (#PCDATA)><!ELEMENT ambienttemperature (#PCDATA)><!ELEMENT modezone1 (#PCDATA)><!ELEMENT setpointtemperaturezone1 (#PCDATA)><!ELEMENT supplyairtemperaturezone1 (#PCDATA)><!ELEMENT returnairtemperaturezone1 (#PCDATA)><!ELEMENT modezone2 (#PCDATA)><!ELEMENT setpointtemperaturezone2 (#PCDATA)><!ELEMENT returnairtemperaturezone2 (#PCDATA)><!ELEMENT modezone3 (#PCDATA)><!ELEMENT setpointtemperaturezone3 (#PCDATA)><!ELEMENT returnairtemperaturezone3 (#PCDATA)><!ELEMENT reeferremotetemperaturesensor1 (#PCDATA)><!ELEMENT reeferremotetemperaturesensor2 (#PCDATA)><!ELEMENT reeferremotetemperaturesensor3 (#PCDATA)><!ELEMENT doorstateopen (#PCDATA)><!ELEMENT doorswitchopen (#PCDATA)><!ELEMENT remoteswitch1open (#PCDATA)><!ELEMENT remoteswitch2open (#PCDATA)><!ELEMENT remotetemperaturesensor1 (#PCDATA)><!ELEMENT remotetemperaturesensor2 (#PCDATA)><!ELEMENT remotetemperaturesensor3 (#PCDATA)><!ELEMENT reeferalarmtype (#PCDATA)><!ELEMENT alarmid (#PCDATA)><!ELEMENT alarmactive (#PCDATA)><!ELEMENT alarmdescr (#PCDATA)><!ELEMENT transid (#PCDATA)><!ELEMENT checkstatus (transid)><!ELEMENT skyfence (skyfencestatus,departureskyfence?,departurelocationid?,arrivalskyfence?,arrivallocationid?)><!ELEMENT skyfencestatus (#PCDATA)><!ELEMENT departureskyfence (#PCDATA)><!ELEMENT departurelocationid (#PCDATA)><!ELEMENT arrivalskyfence (#PCDATA)><!ELEMENT arrivallocationid (#PCDATA)><!ELEMENT speed (#PCDATA)><!ELEMENT heading (#PCDATA)><!ELEMENT headingindegrees (#PCDATA)><!ELEMENT journeydistance (#PCDATA)><!ELEMENT totaldevicemileage (#PCDATA)><!ELEMENT temperaturecelsius (#PCDATA)><!ELEMENT temperaturefahrenheit (#PCDATA)><!ELEMENT locationid (#PCDATA)>]><skybitz><error>0</error><gls><mtsn>GXL7ESPD184969454</mtsn><devicetype>GXT5002C</devicetype><asset><assetid>6397</assetid><assettype>None</assettype><owner>MVT  Mesilla Valley Transportation</owner><groups><groupname>6000-6999</groupname></groups></asset><messagetype>Event</messagetype><binary><inputname>Tether</inputname><inputid>15</inputid><inputval>1</inputval><inputstate>Tether</inputstate></binary><binary><inputname>Tire System</inputname><inputid>1</inputid><inputval>0</inputval><inputstate>Okay</inputstate></binary><extpwr>0</extpwr><serial><serialtype>2</serialtype><serialid>3</serialid><serialname>Motion</serialname><serialdata>Moving</serialdata><event>R</event></serial><serial><serialtype>2</serialtype><serialid>5</serialid><serialname>Cargo</serialname><serialdata>Empty</serialdata></serial><latitude>36.18894</latitude><longitude>-86.85931</longitude><speed>0.0</speed><heading>E</heading><headingindegrees>109.0</headingindegrees><battery>OK</battery><time>2024/07/01 17:28:20</time><quality>0</quality><messagereceivedtime>2024/07/01 17:35:07</messagereceivedtime><landmark><geoname>MVNNA</geoname><locationid>MVNNA</locationid><city>Nashville</city><state>TN</state><country>US</country><postal>37218</postal><distance>0.03</distance><direction>S</direction><geotypename>Yard</geotypename><geoshape>Multi-Point</geoshape><locationids><locationid>MVNNA</locationid></locationids></landmark><address><street>3750 Stewarts Ln</street><city>Nashville</city><state>TN</state><country>US</country><postal>37218</postal></address><skyfence><skyfencestatus>In</skyfencestatus></skyfence><idle><idlestatus>MOVING</idlestatus></idle><epmflag>0</epmflag><ehmeter>n/a</ehmeter><ehcounter>n/a</ehcounter><transid>2145845451</transid></gls></skybitz>```
+];
+T
+| extend d=parse_xml(data)
+// | extend duration_value=d.duration.value, duration_min=d["duration"]["min"]
+| extend error=toint(d.skybitz.error),
+mtsn=tostring(d.skybitz.gls.mtsn),
+devicetype=tostring(d.skybitz.gls.devicetype),
+asset=todynamic(d.skybitz.gls.asset),
+messagetype=tostring(d.skybitz.gls.messagetype),
+binary=todynamic(d.skybitz.gls.binary),
+extpwr=tobool(d.skybitz.gls.extpwr),
+serial=todynamic(d.skybitz.gls.serial),
+latitude=todecimal(d.skybitz.gls.latitude),
+longitude=todecimal(d.skybitz.gls.longitude),
+speed=toint(d.skybitz.gls.speed),
+heading=tostring(d.skybitz.gls.heading),
+headingindegrees=todecimal(d.skybitz.gls.headingindegrees),
+battery=tostring(d.skybitz.gls.battery),
+['time']=tostring(tostring(d.skybitz.gls.['time'])),
+quality=toint(d.skybitz.gls.quality),
+messagereceivedtime=tostring(d.skybitz.gls.messagereceivedtime),
+landmark=todynamic(d.skybitz.gls.landmark),
+address=todynamic(d.skybitz.gls.address),
+skyfence=tostring(d.skybitz.gls.skyfence),
+idle=tostring(d.skybitz.gls.idle),
+epmflag=tostring(d.skybitz.gls.epmflag),
+ehmeter=tostring(d.skybitz.gls.ehmeter),
+ehcounter=tostring(d.skybitz.gls.ehcounter),
+transid=tostring(d.skybitz.gls.transid)
+| extend data=d
+| project-away d
+
+
+
+
+//schema best practices
+//optimizations for throughput
+//best practices for visuals.
+
+rawskybitz
+| extend d=parse_xml(data) 
+| summarize count() by toint(d.skybitz.gls.epmflag)
+
+
+
+rawskybitz
+| take 100
+| extend d=parse_xml(data)
+| extend error=toint(d.skybitz.error),
+mtsn=tostring(d.skybitz.gls.mtsn),
+devicetype=tostring(d.skybitz.gls.devicetype),
+asset=todynamic(d.skybitz.gls.asset),
+messagetype=tostring(d.skybitz.gls.messagetype),
+binary=todynamic(d.skybitz.gls.binary),
+extpwr=tobool(d.skybitz.gls.extpwr),
+serial=todynamic(d.skybitz.gls.serial),
+latitude=todecimal(d.skybitz.gls.latitude),
+longitude=todecimal(d.skybitz.gls.longitude),
+speed=toint(d.skybitz.gls.speed),
+heading=tostring(d.skybitz.gls.heading),
+headingindegrees=todecimal(d.skybitz.gls.headingindegrees),
+battery=tostring(d.skybitz.gls.battery),
+['time']=tostring(tostring(d.skybitz.gls.['time'])),
+quality=toint(d.skybitz.gls.quality),
+messagereceivedtime=tostring(d.skybitz.gls.messagereceivedtime),
+landmark=todynamic(d.skybitz.gls.landmark),
+address=todynamic(d.skybitz.gls.address),
+skyfence=tostring(d.skybitz.gls.skyfence),
+idle=tostring(d.skybitz.gls.idle),
+epmflag=tostring(d.skybitz.gls.epmflag),
+ehmeter=tostring(d.skybitz.gls.ehmeter),
+ehcounter=tostring(d.skybitz.gls.ehcounter),
+transid=tostring(d.skybitz.gls.transid)
+| project-away data, d
+
+
+
+skybitz_TrailerLocations
+| take 100 
+| distinct sbt_battery
+
+
+
+
+
+
+//function
+.create function with (folder='skybitz') GetSkybitzLocationTopic(){
+rawskybitz
+| extend d=parse_xml(data)
+| extend 
+error=toint(d.skybitz.error),
+mtsn=tostring(d.skybitz.gls.mtsn), //sbt_mtsn
+devicetype=tostring(d.skybitz.gls.devicetype),
+asset=todynamic(d.skybitz.gls.asset), //sbt_assetid
+messagetype=tostring(d.skybitz.gls.messagetype), //sbt_messagetype
+binary=todynamic(d.skybitz.gls.binary), //inputname as sbt_tetherstate , sbt_tirestate = binary.inputname=Tire.inputstate
+extpwr=tobool(d.skybitz.gls.extpwr), //sbt_extpwr
+serial=todynamic(d.skybitz.gls.serial), //sbt_movementstate when serialname=Motion, get serialdata. //sbt_cargostate = serial.serialname=Cargo, get serialdata
+latitude=todecimal(d.skybitz.gls.latitude), //sbt_latitude
+longitude=todecimal(d.skybitz.gls.longitude), //sbt_longitude
+speed=toint(d.skybitz.gls.speed),
+heading=tostring(d.skybitz.gls.heading),
+headingindegrees=todecimal(d.skybitz.gls.headingindegrees),
+battery=tostring(d.skybitz.gls.battery),
+['time']=tostring(tostring(d.skybitz.gls.['time'])), //cast to MST as sbt_messagetimestampmst
+quality=toint(d.skybitz.gls.quality),
+messagereceivedtime=tostring(d.skybitz.gls.messagereceivedtime),
+landmark=todynamic(d.skybitz.gls.landmark),
+address=todynamic(d.skybitz.gls.address),
+skyfence=tostring(d.skybitz.gls.skyfence),
+idle=tostring(d.skybitz.gls.idle),
+epmflag=tostring(d.skybitz.gls.epmflag),
+ehmeter=tostring(d.skybitz.gls.ehmeter),
+ehcounter=tostring(d.skybitz.gls.ehcounter),
+transid=tostring(d.skybitz.gls.transid)
+| project-away data
+}
+
+
+                SbtMtsn                = payload.SkyBitz.Gls.Mtsn,
+                SbtAssetid             = payload.SkyBitz.Gls.Asset.AssetId,
+                SbtMessagetype         = payload.SkyBitz.Gls.MessageType,
+                SbtTetherstate         = payload.SkyBitz.Gls.Binary?.FirstOrDefault(b => b.InputName == "Tether")?.InputState,
+                SbtTirestate           = payload.SkyBitz.Gls.Binary?.FirstOrDefault(b => b.InputName == "Tire System")?.InputState,
+                SbtExtpwr              = payload.SkyBitz.Gls.ExtPwr,
+                SbtMovementstate       = payload.SkyBitz.Gls.Serial?.FirstOrDefault(s => s.SerialName == "Motion")?.SerialData,
+                SbtCargostate          = payload.SkyBitz.Gls.Serial?.FirstOrDefault(s => s.SerialName == "Cargo" || s.SerialName == "Volumetric")?.SerialData,
+                SbtLatitude            = payload.SkyBitz.Gls.Latitude,
+                SbtLongitude           = payload.SkyBitz.Gls.Longitude,
+                SbtBattery             = payload.SkyBitz.Gls.Battery,
+                SbtMessagetimestampmst = payloadTimeMst, TimeZoneInfo.ConvertTimeFromUtc(payload.SkyBitz.Gls.Time, TimeZoneInfo.FindSystemTimeZoneById("Mountain Standard Time"));
+                SbtQuality             = payload.SkyBitz.Gls.Quality,
+                SbtGeoname             = payload.SkyBitz.Gls.Landmark?.GeoName,
+                SbtCity                = payload.SkyBitz.Gls.Landmark?.City,
+                SbtState               = payload.SkyBitz.Gls.Landmark?.State,
+                SbtCountry             = payload.SkyBitz.Gls.Landmark?.Country,
+                SbtGeotypename         = payload.SkyBitz.Gls.Landmark?.GeoTypeName,
+                SbtIdlestatus          = payload.SkyBitz.Gls.Idle?.IdleStatus,
+                SbtIdleduration        = payload.SkyBitz.Gls.Idle?.IdleDuration,
+                SbtIdlegap             = payload.SkyBitz.Gls.Idle?.IdleGap,
+                SbtSkyfencestatus      = payload.SkyBitz.Gls.SkyFence?.SkyFenceStatus,
+                SbtSpeed               = payload.SkyBitz.Gls.Speed,
+                SbtHeading             = payload.SkyBitz.Gls.Heading,
+                SbtTransid             = payload.SkyBitz.Gls.TransId
+
+
+
+//function
+// .create function with (folder='skybitz') fn_skybitz_TrailerLocations(){
+
+rawskybitz
+| take 1000
+| extend payload=parse_xml(data)
+// | extend 
+// sbt_mtsn=tostring(payload.skybitz.gls.mtsn),
+// sbt_assetid=todynamic(payload.skybitz.gls.asset), 
+// sbt_messagetype=tostring(payload.skybitz.gls.messagetype)
+| project binary=todynamic(payload.skybitz.gls.binary)
+| sort by ingestion_time() asc
+| extend  n=row_number()
+| summarize make_list(binary) by n, tostring(binary)
+| mv-expand list_binary
+| project n, inputname=tostring(list_binary.inputname), inputstate=tostring(list_binary.inputstate)
+| evaluate pivot(inputname, take_any(inputstate), n)
+// | extend ['Tire System']=iff(isempty(['Tire System']), 'Okay',['Tire System'])
+| where ['Tire System']=='Fault'
+
+
+
+rawskybitz
+| take 1000
+| extend payload=parse_xml(data)
+| project binary=todynamic(payload.skybitz.gls.binary)
+| extend SbtTetherstate=case(binary.inputname=='Tether', binary.inputstate, binary[0].inputstate )
+| extend SbtTireSystem=case(binary.inputname=='Tire System', binary.inputstate, '' )
+
+
+rawskybitz
+| take 1000
+| extend payload=parse_xml(data)
+| extend sbt_mtsn=tostring(payload.skybitz.gls.mtsn),
+    sbt_assetid=tostring(payload.skybitz.gls.asset.assetid),    
+    sbt_messagetype=tostring(payload.skybitz.gls.messagetype),
+    binary=todynamic(payload.skybitz.gls.binary)
+| summarize make_list(binary) by sbt_mtsn, sbt_assetid, sbt_messagetype
+| mv-expand list_binary
+| extend inputname=tostring(list_binary.inputname), inputstate=tostring(list_binary.inputstate)
+| evaluate pivot(inputname, take_any(inputstate), sbt_mtsn, sbt_assetid, sbt_messagetype)
+// | extend ['Tire System']=iff(isempty(['Tire System']), 'Okay',['Tire System'])
+// | where ['Tire System']=='Fault'
+
+
+
+skybitz_TrailerLocations
+| distinct sbt_tirestate
+
