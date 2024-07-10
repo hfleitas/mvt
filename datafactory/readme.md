@@ -1,7 +1,14 @@
-data gateway: 
+Data gateway: 
 ```
 dev-biwhs.mvte.com
 ```
 
-server: `dev-biwhs.mvte.com` (restored prod backup copy)
-database: `dw_pubRF`
+Server (restored prod backup copy): 
+```
+dev-biwhs.mvte.com
+```
+
+Database: 
+```
+dw_pubRF
+```
