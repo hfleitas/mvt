@@ -181,12 +181,7 @@ print datetime_diff('day',datetime(6/25/24), datetime(7/9/24))
 .show table skybitz_TrailerLocations extents 
 | where isnotempty(Tags)
 
-// topics:
-// 1. connect from c-sharp app pull data/read, etc. 
-// 2. app 1 > service bus > subs > app 2 main to sql db (compares to decide activity) 
-    // ie. arrive/depart using geofence table current row vs prev row. > app 2 > service bus topic depart/arrived > subs > tbd... another table with field of depart/arrive.
-    // border crossing, etc.
-    // CurrentRow is 1 for every trailer (prev row), gets updated to 0 and next row as 1.
+
 
 datatable (d:datetime)[
 datetime(2024-06-29),
@@ -212,3 +207,12 @@ skybitz_TrailerLocations
 | where t has 'append'
 | summarize count() by tostring(t)
 | summarize sum(count_), sum(array_length(todynamic(t))) //1378960 rows, 15days! 😁
+
+
+
+// topics:
+// 1. connect from c-sharp app pull data/read, etc. 
+// 2. app 1 > service bus > subs > app 2 main to sql db (compares to decide activity) 
+    // ie. arrive/depart using geofence table current row vs prev row. > app 2 > service bus topic depart/arrived > subs > tbd... another table with field of depart/arrive.
+    // border crossing, etc.
+    // CurrentRow is 1 for every trailer (prev row), gets updated to 0 and next row as 1.
