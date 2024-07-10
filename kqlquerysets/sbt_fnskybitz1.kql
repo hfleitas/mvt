@@ -1,0 +1,323 @@
+// xml data lands raw in rawskybitz from Service Bus to Eventstream to Eventhouse (direct ingestion) 
+.create table rawskybitz (data:string)
+
+// historical data migrated from SQL Server to Eventhouse.
+.create table skybitz_TrailerLocations (sbt_mtsn:string,sbt_assetid:string,sbt_messagetype:string,sbt_messagetimestampmst:datetime,sbt_tetherstate:string,sbt_tirestate:string,sbt_extpwr:int,sbt_movementstate:string,sbt_cargostate:string,sbt_latitude:decimal,sbt_longitude:decimal,sbt_battery:string,sbt_quality:int,sbt_geoname:string,sbt_city:string,sbt_state:string,sbt_country:string,sbt_geotypename:string,sbt_idlestatus:string,sbt_idleduration:decimal,sbt_idlegap:decimal,sbt_skyfencestatus:string,sbt_speed:string,sbt_heading:string,sbt_transid:string,etl_timestampUTC:datetime,CurrentRow:int)
+
+// need to transform rawskybitz records into skybitz_TrailerLocations
+
+
+// these are the transformations provided by the customer in c-sharp
+// I'm unable to reproduce the transformations for these 5 columns: SbtTetherstate, SbtTirestate, SbtMovementstate, SbtCargostate, SbtMessagetimestampmst
+
+SbtMtsn                = payload.SkyBitz.Gls.Mtsn,
+SbtAssetid             = payload.SkyBitz.Gls.Asset.AssetId,
+SbtMessagetype         = payload.SkyBitz.Gls.MessageType,
+SbtTetherstate         = payload.SkyBitz.Gls.Binary?.FirstOrDefault(b => b.InputName == "Tether")?.InputState,
+SbtTirestate           = payload.SkyBitz.Gls.Binary?.FirstOrDefault(b => b.InputName == "Tire System")?.InputState,
+SbtExtpwr              = payload.SkyBitz.Gls.ExtPwr,
+SbtMovementstate       = payload.SkyBitz.Gls.Serial?.FirstOrDefault(s => s.SerialName == "Motion")?.SerialData,
+SbtCargostate          = payload.SkyBitz.Gls.Serial?.FirstOrDefault(s => s.SerialName == "Cargo" || s.SerialName == "Volumetric")?.SerialData,
+SbtLatitude            = payload.SkyBitz.Gls.Latitude,
+SbtLongitude           = payload.SkyBitz.Gls.Longitude,
+SbtBattery             = payload.SkyBitz.Gls.Battery,
+SbtMessagetimestampmst = payloadTimeMst, TimeZoneInfo.ConvertTimeFromUtc(payload.SkyBitz.Gls.Time, TimeZoneInfo.FindSystemTimeZoneById("Mountain Standard Time"));
+SbtQuality             = payload.SkyBitz.Gls.Quality,
+SbtGeoname             = payload.SkyBitz.Gls.Landmark?.GeoName,
+SbtCity                = payload.SkyBitz.Gls.Landmark?.City,
+SbtState               = payload.SkyBitz.Gls.Landmark?.State,
+SbtCountry             = payload.SkyBitz.Gls.Landmark?.Country,
+SbtGeotypename         = payload.SkyBitz.Gls.Landmark?.GeoTypeName,
+SbtIdlestatus          = payload.SkyBitz.Gls.Idle?.IdleStatus,
+SbtIdleduration        = payload.SkyBitz.Gls.Idle?.IdleDuration,
+SbtIdlegap             = payload.SkyBitz.Gls.Idle?.IdleGap,
+SbtSkyfencestatus      = payload.SkyBitz.Gls.SkyFence?.SkyFenceStatus,
+SbtSpeed               = payload.SkyBitz.Gls.Speed,
+SbtHeading             = payload.SkyBitz.Gls.Heading,
+SbtTransid             = payload.SkyBitz.Gls.TransId
+
+rawskybitz
+| top 5000 by ingestion_time() asc
+| extend parse_xml(data)
+
+print dt=datetime("2024/06/25 13:30:04")
+| extend mst = datetime_utc_to_local(dt, 'US/Mountain')
+| extend diff = dt - mst
+
+
+//incorrect
+.create-or-alter function with(folder='skybitz') fn_sbt_TrailerLocations(){
+rawskybitz
+| extend payload=parse_xml(data)
+| extend 
+    sbt_mtsn=tostring(payload.skybitz.gls.mtsn),
+    sbt_assetid=tostring(payload.skybitz.gls.asset.assetid),
+    sbt_messagetype=tostring(payload.skybitz.gls.messagetype),
+    ts=tostring(payload.skybitz.gls.['time']),     
+    binary=todynamic(payload.skybitz.gls.binary),
+    sbt_extpwr=toint(payload.skybitz.gls.extpwr),
+    serial=todynamic(payload.skybitz.gls.serial),
+    sbt_latitude=todecimal(payload.skybitz.gls.latitude),
+    sbt_longitude=todecimal(payload.skybitz.gls.longitude),
+    sbt_battery=tostring(payload.skybitz.gls.battery),
+    sbt_quality=toint(payload.skybitz.gls.quality),
+    sbt_geoname=tostring(payload.skybitz.gls.landmark.geoname),
+    sbt_city=tostring(payload.skybitz.gls.landmark.city),
+    sbt_state=tostring(payload.skybitz.gls.landmark.state),
+    sbt_country=tostring(payload.skybitz.gls.landmark.country),
+    sbt_geotypename=tostring(payload.skybitz.gls.landmark.geotypename),
+    sbt_idlestatus=tostring(payload.skybitz.gls.idle.idlestatus),
+    sbt_idleduration=todecimal(payload.skybitz.gls.idle.idleduration),
+    sbt_idlegap=todecimal(payload.skybitz.gls.idle.idlegap),
+    sbt_skyfencestatus=tostring(payload.skybitz.gls.skyfence.skyfencestatus),
+    sbt_speed=tostring(payload.skybitz.gls.speed),
+    sbt_heading=tostring(payload.skybitz.gls.heading),
+    sbt_transid=tostring(payload.skybitz.gls.transid),
+    etl_timestampUTC=ingestion_time()
+| extend ts=split(replace(' ','/',ts),'/')
+| extend ts=strcat(ts[1],'/',ts[2],'/',ts[0],' ',ts[3])
+| extend ts=todatetime(ts)
+| extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
+| project-away ts
+| summarize make_list(binary), make_list(serial) by 
+    sbt_mtsn,
+    sbt_assetid,
+    sbt_messagetype,
+    sbt_messagetimestampmst,
+    sbt_extpwr,
+    sbt_latitude,
+    sbt_longitude,
+    sbt_battery,
+    sbt_quality,
+    sbt_geoname,
+    sbt_city,
+    sbt_state,
+    sbt_country,
+    sbt_geotypename,
+    sbt_idlestatus,
+    sbt_idleduration,
+    sbt_idlegap,
+    sbt_skyfencestatus,
+    sbt_speed,
+    sbt_heading,
+    sbt_transid,
+    etl_timestampUTC
+| mv-expand list_binary, list_serial
+| extend inputname=tostring(list_binary.inputname), inputstate=tostring(list_binary.inputstate)
+| extend serialname=tostring(list_serial.serialname), serialdata=tostring(list_serial.serialdata)
+| evaluate pivot(inputname, take_any(inputstate))
+| project-rename sbt_tetherstate=Tether, sbt_tirestate=['Tire System'], _Empty1=_Empty
+| evaluate pivot(serialname, take_any(serialdata))
+| project-rename sbt_movementstate=Motion, sbt_cargostate=Cargo
+| extend sbt_cargostate=iff(sbt_cargostate=='', Volumetric, sbt_cargostate)
+| project 
+    sbt_mtsn, 
+    sbt_assetid, 
+    sbt_messagetype,
+    sbt_messagetimestampmst,
+    sbt_tetherstate,
+    sbt_tirestate,
+    sbt_extpwr,
+    sbt_movementstate,
+    sbt_cargostate,
+    sbt_latitude,
+    sbt_longitude,
+    sbt_battery,
+    sbt_quality,
+    sbt_geoname,
+    sbt_city,
+    sbt_state,
+    sbt_country,
+    sbt_geotypename,
+    sbt_idlestatus,
+    sbt_idleduration,
+    sbt_idlegap,
+    sbt_skyfencestatus,
+    sbt_speed,
+    sbt_heading,
+    sbt_transid,
+    etl_timestampUTC,
+    CurrentRow=toint(0)
+}
+
+
+sbt_extpwr, //bool vs int
+sbt_idlegap, //string vs decimal
+sbt_speed, //int vs string
+CurrentRow=toint(0) //long vs int
+
+
+skybitz_TrailerLocations
+| getschema //27 cols
+
+skybitz_TrailerLocations
+| summarize count() by  CurrentRow
+
+skybitz_TrailerLocations
+| summarize count() by bin(etl_timestampUTC,1d)
+| render timechart 
+
+
+
+
+
+// fix string to valid datetime iso-format
+datatable(data:string)['{"value":"2024/06/25 13:30:04"}']
+| extend d=todynamic(data)
+| extend value=tostring(d.value)
+| extend datetime_utc_to_local(todatetime(value), 'US/Mountain') //due to invalid format
+
+
+// fixed date string to mst
+datatable(data:string)['{"value":"2024/06/25 13:30:04"}']
+| extend d=todynamic(data)
+| extend value=tostring(d.value)
+| extend s=split(replace(' ','/',value),'/')
+| extend fix=strcat(s[1],'/',s[2],'/',s[0],' ',s[3])
+| extend dt=todatetime(fix)
+| extend dt_mst=datetime_utc_to_local(todatetime(dt), 'US/Mountain')
+
+// fixed date string to mst easier using parse
+datatable(data:string)['{"value":"2024/06/25 13:30:04"}']
+| extend d=todynamic(data)
+| extend value=tostring(d.value)
+| parse value with year:long "/" month:long "/" day:long " " hour:long ":" minute:long ":" second:long
+| project dd = make_datetime(year, month, day, hour, minute, second)
+
+
+
+rawskybitz
+| summarize count() by bin(ingestion_time(),1h)
+| render timechart 
+
+skybitz_TrailerLocations
+| count
+
+
+.alter table skybitz_TrailerLocations policy update
+```
+[
+    {
+        "IsEnabled": true,
+        "Source": "rawskybitz",
+        "Query": "fn_sbt_TrailerLocations"
+    }
+]
+```
+
+.show table skybitz_TrailerLocations policy update 
+
+skybitz_TrailerLocations
+| count //659
+
+skybitz_TrailerLocations
+| summarize max(sbt_messagetimestampmst)
+
+
+skybitz_TrailerLocations
+| summarize count() by bin(sbt_messagetimestampmst,1d)
+
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime_utc_to_local(ago(1h), 'US/Mountain')
+
+
+//troubleshoot update policy failures
+.show ingestion failures 
+| where FailedOn > ago(1h) and OriginatesFromUpdatePolicy == true
+
+
+.append  skybitz_TrailerLocations <| 
+
+rawskybitz
+| top 1000 by ingestion_time() > ago(1h)
+| extend payload=parse_xml(data)
+| extend 
+    sbt_mtsn=tostring(payload.skybitz.gls.mtsn),
+    sbt_assetid=tostring(payload.skybitz.gls.asset.assetid),
+    sbt_messagetype=tostring(payload.skybitz.gls.messagetype),
+    ts=tostring(payload.skybitz.gls.['time']),     
+    binary=todynamic(payload.skybitz.gls.binary),
+    sbt_extpwr=toint(payload.skybitz.gls.extpwr),
+    serial=todynamic(payload.skybitz.gls.serial),
+    sbt_latitude=todecimal(payload.skybitz.gls.latitude),
+    sbt_longitude=todecimal(payload.skybitz.gls.longitude),
+    sbt_battery=tostring(payload.skybitz.gls.battery),
+    sbt_quality=toint(payload.skybitz.gls.quality),
+    sbt_geoname=tostring(payload.skybitz.gls.landmark.geoname),
+    sbt_city=tostring(payload.skybitz.gls.landmark.city),
+    sbt_state=tostring(payload.skybitz.gls.landmark.state),
+    sbt_country=tostring(payload.skybitz.gls.landmark.country),
+    sbt_geotypename=tostring(payload.skybitz.gls.landmark.geotypename),
+    sbt_idlestatus=tostring(payload.skybitz.gls.idle.idlestatus),
+    sbt_idleduration=todecimal(payload.skybitz.gls.idle.idleduration),
+    sbt_idlegap=todecimal(payload.skybitz.gls.idle.idlegap),
+    sbt_skyfencestatus=tostring(payload.skybitz.gls.skyfence.skyfencestatus),
+    sbt_speed=tostring(payload.skybitz.gls.speed),
+    sbt_heading=tostring(payload.skybitz.gls.heading),
+    sbt_transid=tostring(payload.skybitz.gls.transid),
+    etl_timestampUTC=ingestion_time()
+| extend ts=split(replace(' ','/',ts),'/')
+| extend ts=strcat(ts[1],'/',ts[2],'/',ts[0],' ',ts[3])
+| extend ts=todatetime(ts)
+| extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
+| project-away ts
+| summarize make_list(binary), make_list(serial) by 
+    sbt_mtsn,
+    sbt_assetid,
+    sbt_messagetype,
+    sbt_messagetimestampmst,
+    sbt_extpwr,
+    sbt_latitude,
+    sbt_longitude,
+    sbt_battery,
+    sbt_quality,
+    sbt_geoname,
+    sbt_city,
+    sbt_state,
+    sbt_country,
+    sbt_geotypename,
+    sbt_idlestatus,
+    sbt_idleduration,
+    sbt_idlegap,
+    sbt_skyfencestatus,
+    sbt_speed,
+    sbt_heading,
+    sbt_transid,
+    etl_timestampUTC
+| mv-expand list_binary, list_serial
+| extend inputname=tostring(list_binary.inputname), inputstate=tostring(list_binary.inputstate)
+| extend serialname=tostring(list_serial.serialname), serialdata=tostring(list_serial.serialdata)
+| evaluate pivot(inputname, take_any(inputstate))
+| project-rename sbt_tetherstate=Tether, sbt_tirestate=['Tire System'], _Empty1=_Empty
+| evaluate pivot(serialname, take_any(serialdata))
+| project-rename sbt_movementstate=Motion, sbt_cargostate=Cargo
+| extend sbt_cargostate=iff(sbt_cargostate=='', Volumetric, sbt_cargostate)
+| project 
+    sbt_mtsn, 
+    sbt_assetid, 
+    sbt_messagetype,
+    sbt_messagetimestampmst,
+    sbt_tetherstate,
+    sbt_tirestate,
+    sbt_extpwr, //bool vs int
+    sbt_movementstate,
+    sbt_cargostate,
+    sbt_latitude,
+    sbt_longitude,
+    sbt_battery,
+    sbt_quality,
+    sbt_geoname,
+    sbt_city,
+    sbt_state,
+    sbt_country,
+    sbt_geotypename,
+    sbt_idlestatus,
+    sbt_idleduration, //string vs decimal
+    sbt_idlegap, //string vs decimal
+    sbt_skyfencestatus,
+    sbt_speed, //int vs string
+    sbt_heading,
+    sbt_transid,
+    etl_timestampUTC,
+    CurrentRow=toint(0) //long vs int
+| getschema 
