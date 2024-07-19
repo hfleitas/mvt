@@ -1,0 +1,59 @@
+skybitz_TrailerLocations
+| summarize count() by startofmonth(sbt_messagetimestampmst), endofmonth(sbt_messagetimestampmst)
+| project startofmonth=Column1, endofmonth=Column2
+| project startofmonth=todatetime(startofmonth), endofmonth=todatetime(endofmonth)
+| sort by startofmonth asc
+| project startofmonth=trim_end('.{5}$',replace_string(tostring(startofmonth),'T',' ')), endofmonth=trim_end('.{5}$',replace_string(tostring(endofmonth),'T',' '))
+| project bag=bag_pack_columns(startofmonth,endofmonth)
+| summarize make_list(bag)
+
+
+[{"startofmonth":"2021-04-01 00:00:00.000","endofmonth":"2021-04-30 23:59:59.999"},{"startofmonth":"2021-05-01 00:00:00.000","endofmonth":"2021-05-31 23:59:59.999"},{"startofmonth":"2021-06-01 00:00:00.000","endofmonth":"2021-06-30 23:59:59.999"},{"startofmonth":"2021-07-01 00:00:00.000","endofmonth":"2021-07-31 23:59:59.999"},{"startofmonth":"2021-08-01 00:00:00.000","endofmonth":"2021-08-31 23:59:59.999"},{"startofmonth":"2021-09-01 00:00:00.000","endofmonth":"2021-09-30 23:59:59.999"},{"startofmonth":"2021-10-01 00:00:00.000","endofmonth":"2021-10-31 23:59:59.999"},{"startofmonth":"2021-11-01 00:00:00.000","endofmonth":"2021-11-30 23:59:59.999"},{"startofmonth":"2021-12-01 00:00:00.000","endofmonth":"2021-12-31 23:59:59.999"},{"startofmonth":"2022-01-01 00:00:00.000","endofmonth":"2022-01-31 23:59:59.999"},{"startofmonth":"2022-02-01 00:00:00.000","endofmonth":"2022-02-28 23:59:59.999"},{"startofmonth":"2022-03-01 00:00:00.000","endofmonth":"2022-03-31 23:59:59.999"},{"startofmonth":"2022-04-01 00:00:00.000","endofmonth":"2022-04-30 23:59:59.999"},{"startofmonth":"2022-05-01 00:00:00.000","endofmonth":"2022-05-31 23:59:59.999"},{"startofmonth":"2022-06-01 00:00:00.000","endofmonth":"2022-06-30 23:59:59.999"},{"startofmonth":"2022-07-01 00:00:00.000","endofmonth":"2022-07-31 23:59:59.999"},{"startofmonth":"2022-08-01 00:00:00.000","endofmonth":"2022-08-31 23:59:59.999"},{"startofmonth":"2022-09-01 00:00:00.000","endofmonth":"2022-09-30 23:59:59.999"},{"startofmonth":"2022-10-01 00:00:00.000","endofmonth":"2022-10-31 23:59:59.999"},{"startofmonth":"2022-11-01 00:00:00.000","endofmonth":"2022-11-30 23:59:59.999"},{"startofmonth":"2022-12-01 00:00:00.000","endofmonth":"2022-12-31 23:59:59.999"},{"startofmonth":"2023-01-01 00:00:00.000","endofmonth":"2023-01-31 23:59:59.999"},{"startofmonth":"2023-02-01 00:00:00.000","endofmonth":"2023-02-28 23:59:59.999"},{"startofmonth":"2023-03-01 00:00:00.000","endofmonth":"2023-03-31 23:59:59.999"},{"startofmonth":"2023-04-01 00:00:00.000","endofmonth":"2023-04-30 23:59:59.999"},{"startofmonth":"2023-05-01 00:00:00.000","endofmonth":"2023-05-31 23:59:59.999"},{"startofmonth":"2023-06-01 00:00:00.000","endofmonth":"2023-06-30 23:59:59.999"},{"startofmonth":"2023-07-01 00:00:00.000","endofmonth":"2023-07-31 23:59:59.999"},{"startofmonth":"2023-08-01 00:00:00.000","endofmonth":"2023-08-31 23:59:59.999"},{"startofmonth":"2023-09-01 00:00:00.000","endofmonth":"2023-09-30 23:59:59.999"},{"startofmonth":"2023-10-01 00:00:00.000","endofmonth":"2023-10-31 23:59:59.999"},{"startofmonth":"2023-11-01 00:00:00.000","endofmonth":"2023-11-30 23:59:59.999"},{"startofmonth":"2023-12-01 00:00:00.000","endofmonth":"2023-12-31 23:59:59.999"},{"startofmonth":"2024-01-01 00:00:00.000","endofmonth":"2024-01-31 23:59:59.999"},{"startofmonth":"2024-02-01 00:00:00.000","endofmonth":"2024-02-29 23:59:59.999"},{"startofmonth":"2024-03-01 00:00:00.000","endofmonth":"2024-03-31 23:59:59.999"},{"startofmonth":"2024-04-01 00:00:00.000","endofmonth":"2024-04-30 23:59:59.999"},{"startofmonth":"2024-05-01 00:00:00.000","endofmonth":"2024-05-31 23:59:59.999"},{"startofmonth":"2024-06-01 00:00:00.000","endofmonth":"2024-06-30 23:59:59.999"},{"startofmonth":"2024-07-01 00:00:00.000","endofmonth":"2024-07-31 23:59:59.999"}]
+
+
+.alter table skybitz_TrailerLocations policy update 
+```
+[
+  {
+    "IsEnabled": false,
+    "Source": "rawskybitz",
+    "Query": "fn_sbt_TrailerLocations",
+    "IsTransactional": false,
+    "PropagateIngestionProperties": true,
+    "ManagedIdentity": null
+  }
+]
+```
+
+.show table * policy update
+
+.clear table skybitz_TrailerLocations_old data
+
+.rename table skybitz_TrailerLocations to skybitz_TrailerLocations_old
+
+MirroringContinuousExport-b941ce08-c131-4227-a67c-f5ff9c51e2c1
+
+.set skybitz_TrailerLocations with(folder='skybitz') <| skybitz_TrailerLocations_old | limit 0
+
+.drop table skybitz_TrailerLocations_old ifexists
+
+skybitz_TrailerLocations
+| take 10
+
+
+//completed pipeline with logical partitions
+
+.show table skybitz_TrailerLocations extents
+
+skybitz_TrailerLocations
+| count //63028454
+
+// pipeline finished.
+
+skybitz_TrailerLocations
+| summarize count() by bin(sbt_messagetimestampmst,1d) //max day 2024-07-15T00:00:00Z (mst) , 2024-07-16T00:00:00Z (etl timestamp)
+
+skybitz_TrailerLocations
+// | summarize max(sbt_messagetimestampmst) //2024-07-15T22:24:04Z
+| summarize max(etl_timestampUTC) //2024-07-16T04:24:42.483Z
+
