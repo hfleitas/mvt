@@ -1,0 +1,144 @@
+rawplatsci
+| take 10
+| project todynamic(FullMessage)
+
+.create table rawplatsci (
+ApplicationCode:string,
+MessageTimeStamp:string,
+OrderNumber:string,
+DispatchNumber:string,
+Unit:string,
+Driver1:string,
+Driver2:string,
+FormName:string,
+JsonData:string,
+Event:string,
+OriginTimestamp:string,
+FullMessage:string
+) with (folder='raw')
+
+platsci_TelematicHeartbeats
+| where Logged_At_UTC >=ago(5d)
+| take 1000
+
+
+platsci_TelematicHeartbeats
+| project s=substring(GPS_Description,0,7)
+| distinct s
+
+
+.create table platsci_TelematicHeartbeats (
+TelematicHeartbeats_ID:long, 
+Data_Id:string,
+Unit_Number:string,
+Unit_VIN:string,
+Driver_Code:string,
+Cvd_Id:string,
+Tablet_Serial:string,
+Event:string,
+Logged_At_UTC:datetime,
+Logged_At_MT:datetime,
+Heartbeat_Id:string,
+Speed:decimal,
+Odometer:decimal,
+Odometer_Jump:decimal,
+Heading:int,
+Ignition:bool,
+RPM:decimal,
+Engine_Hours:decimal,
+Engine_Hours_Jump:decimal,
+Wheels_In_Motion:bool,
+Accuracy:decimal,
+Satellites:int,
+GPS_Valid:bool,
+HDOP:int,
+Fuel_Level:decimal,
+Total_Fuel_Used:decimal,
+GPS_Latitude:decimal,
+GPS_Longitude:decimal,
+GPS_Description:string,
+GPS_GeoPoint:string,
+Message_Id:string,
+Consumer_Version:string,
+Origin_Version:string,
+Timestamp:datetime,
+Ignore_Data_Flag:bool,
+ETL_Load_Date_MT:datetime,
+ETL_DW_PubRF_Load_Date:datetime,
+GPS_State:string
+) with (folder='platsci')
+
+
+.create-or-alter function with(folder='platsci') fn_platsci_TelematicHeartbeats() { 
+let maxid=toscalar(platsci_TelematicHeartbeats | summarize max(TelematicHeartbeats_ID)); //to increment TelematicHeartbeats_ID
+rawplatsci
+// | take 500
+| project todynamic(FullMessage)
+| order by isnull(true) //must sort for row_number()
+| extend 
+    TelematicHeartbeats_ID=tolong(maxid+row_number()),
+    Data_Id=tostring(FullMessage.data.id),
+    //////////////////////
+    //change to mv-apply//
+    Unit_Number=FullMessage.data.relationships.assets.data[0].attributes.external_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.ExternalId,
+    Unit_VIN=FullMessage.data.relationships.assets.data[0].attributes.hardware_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.HardwareId,
+    Driver_Code=FullMessage.data.relationships.users.data[0].attributes.external_id, //user = message.Data.Relationships.Users.Data.FirstOrDefault(d => d.Type == "user"); user?.Attributes.ExternalId;
+    Cvd_Id=FullMessage.data.relationships.devices.data[0].id, //cvd = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "cvd"); //cvd?.Id,
+    Tablet_Serial=FullMessage.data.relationships.devices.data[1].attributes.serial, //tablet = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "tablet"); //tablet?.Attributes?.Serial
+    //////////////////////
+    Event=tostring(FullMessage.data.attributes.event),
+    Logged_At_UTC=todatetime(FullMessage.data.attributes.logged_at),
+    Logged_At_MT=datetime_utc_to_local(todatetime(FullMessage.data.attributes.logged_at), 'US/Mountain'),
+    Heartbeat_Id=tostring(FullMessage.data.attributes.heartbeat_id),
+    Speed=todecimal(FullMessage.data.attributes.speed),
+    Odometer=todecimal(FullMessage.data.attributes.odometer),
+    Odometer_Jump=todecimal(FullMessage.data.attributes.odometer_jump),
+    Heading=toint(FullMessage.data.attributes.heading),
+    Ignition=tobool(FullMessage.data.attributes.ignition),
+    RPM=todecimal(FullMessage.data.attributes.rpm),
+    Engine_Hours=todecimal(FullMessage.data.attributes.engine_hours),
+    Engine_Hours_Jump=todecimal(FullMessage.data.attributes.engine_hours_jump),
+    Wheels_In_Motion=tobool(FullMessage.data.attributes.wheels_in_motion),
+    Accuracy=todecimal(FullMessage.data.attributes.accuracy),
+    Satellites=toint(FullMessage.data.attributes.satellites),
+    GPS_Valid=tobool(FullMessage.data.attributes.gps_valid),
+    HDOP=toint(FullMessage.data.attributes.hdop),
+    Fuel_Level=todecimal(FullMessage.data.attributes.fuel_level),
+    Total_Fuel_Used=todecimal(FullMessage.data.attributes.total_fuel_used),
+    GPS_Latitude=todecimal(FullMessage.data.attributes.location.latitude),
+    GPS_Longitude=todecimal(FullMessage.data.attributes.location.longitude),
+    GPS_Description=tostring(FullMessage.data.attributes.location.description),
+    GPS_GeoPoint=strcat('POINT (',tostring(FullMessage.data.attributes.location.longitude),' ',tostring(FullMessage.data.attributes.location.latitude),')'), //POINT (-106.292644 31.702925),
+    Message_Id=tostring(FullMessage.meta.message_id),
+    Consumer_Version=tostring(FullMessage.meta.consumer_version),
+    Origin_Version=tostring(FullMessage.meta.origin_version),
+    Timestamp=todatetime(FullMessage.meta.timestamp),
+    Ignore_Data_Flag=iff(todecimal(FullMessage.data.attributes.odometer)>0,false, true), //!(odometer > 0) ... means “not (odometer is greater than 0)”. In other words, it will evaluate to true if odometer is less than or equal to 0, and false if odometer is greater than 0.
+    ETL_Load_Date_MT=datetime_utc_to_local(ingestion_time(), 'US/Mountain'),
+    ETL_DW_PubRF_Load_Date=ingestion_time(), //need clarification
+    GPS_State=extract(@"[A-Z]{2}$", 0, tostring(FullMessage.data.attributes.location.description))
+| project-away FullMessage
+}
+
+
+// IDENTITY
+let target=datatable(id:long) //, Timestamp:datetime, DeviceId:string, MessageType:string)[
+[
+    1,
+    2,
+    1000,
+    1001
+];
+let maxid=toscalar(target | summarize max(id));
+datatable(RawData: dynamic)
+    [
+    dynamic({"TimeStamp": 1691757732, "DeviceId": "Sensor01", "MessageType": "Telemetry", "DeviceType": "Laminator", "SensorName": "Temperature", "SensorValue": 78.3, "SensorUnit": "Celcius"}),
+    dynamic({"TimeStamp": 1691758832, "DeviceId": "Sensor01", "MessageType": "Alarms", "DeviceType": "Laminator", "AlarmType": "Temperature threshold breached"}),
+    dynamic({"TimeStamp": 1691759932, "DeviceId": "Sensor01", "MessageType": "Foo", "ErrorType": "Unknown"})
+    ]
+| project 
+    Timestamp=unixtime_seconds_todatetime(tolong(RawData.TimeStamp)),
+    DeviceId=tostring(RawData.DeviceId),
+    MessageType=tostring(RawData.MessageType)
+| sort by isnull(true)
+| extend id=tolong(maxid+row_number())
