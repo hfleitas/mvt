@@ -4,73 +4,261 @@
     "properties": {
         "activities": [
             {
-                "name": "skybitz_TrailerLocations",
-                "type": "Copy",
+                "name": "ForEach1",
+                "type": "ForEach",
                 "dependsOn": [],
-                "policy": {
-                    "timeout": "0.12:00:00",
-                    "retry": 0,
-                    "retryIntervalInSeconds": 30,
-                    "secureOutput": false,
-                    "secureInput": false
-                },
                 "typeProperties": {
-                    "source": {
-                        "type": "SqlServerSource",
-                        "queryTimeout": "02:00:00",
-                        "isolationLevel": "ReadUncommitted",
-                        "partitionOption": "None",
-                        "datasetSettings": {
-                            "annotations": [],
-                            "type": "SqlServerTable",
-                            "schema": [],
-                            "typeProperties": {
-                                "schema": "skybitz",
-                                "table": "TrailerLocations",
-                                "database": "dw_pubRF"
-                            },
-                            "externalReferences": {
-                                "connection": "b2975132-0865-4abf-bb9b-1f6a44f949aa"
-                            }
-                        }
+                    "items": {
+                        "value": "@pipeline().parameters.list",
+                        "type": "Expression"
                     },
-                    "sink": {
-                        "type": "KustoDatabaseSink",
-                        "ingestionMappingName": "",
-                        "datasetSettings": {
-                            "annotations": [],
-                            "linkedService": {
-                                "name": "eventhouse",
-                                "properties": {
-                                    "annotations": [],
-                                    "type": "KustoDatabase",
-                                    "typeProperties": {
-                                        "workspaceId": "a7b0fd30-da02-4a3a-970b-8041d2cb9a47",
-                                        "endpoint": "https://trd-6qvum6py8ygwgbhmu7.z0.kusto.fabric.microsoft.com",
-                                        "database": "f2225e74-2418-4e30-bac8-cd02eabb9761"
+                    "activities": [
+                        {
+                            "name": "skybitz_TrailerLocations",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlServerSource",
+                                    "sqlReaderQuery": {
+                                        "value": "@concat('Select *\nfrom skybitz.TrailerLocations with(nolock)\nwhere sbt_messagetimestampmst >= ''',item().startofmonth,''' and sbt_messagetimestampmst <= ''',item().endofmonth,''''\n)",
+                                        "type": "Expression"
+                                    },
+                                    "queryTimeout": "02:00:00",
+                                    "isolationLevel": "ReadUncommitted",
+                                    "partitionOption": "None",
+                                    "datasetSettings": {
+                                        "annotations": [],
+                                        "type": "SqlServerTable",
+                                        "schema": [],
+                                        "typeProperties": {
+                                            "schema": "skybitz",
+                                            "table": "TrailerLocations",
+                                            "database": "dw_pubRF"
+                                        },
+                                        "externalReferences": {
+                                            "connection": "b2975132-0865-4abf-bb9b-1f6a44f949aa"
+                                        }
+                                    }
+                                },
+                                "sink": {
+                                    "type": "KustoDatabaseSink",
+                                    "ingestionMappingName": "",
+                                    "additionalProperties": {
+                                        "value": "@json(concat('{\"creationTime\":\"',string(formatDateTime(item().endofmonth)),'\"}'))",
+                                        "type": "Expression"
+                                    },
+                                    "datasetSettings": {
+                                        "annotations": [],
+                                        "linkedService": {
+                                            "name": "eventhouse",
+                                            "properties": {
+                                                "annotations": [],
+                                                "type": "KustoDatabase",
+                                                "typeProperties": {
+                                                    "workspaceId": "a7b0fd30-da02-4a3a-970b-8041d2cb9a47",
+                                                    "endpoint": "https://trd-6qvum6py8ygwgbhmu7.z0.kusto.fabric.microsoft.com",
+                                                    "database": "f2225e74-2418-4e30-bac8-cd02eabb9761"
+                                                }
+                                            }
+                                        },
+                                        "type": "KustoDatabaseTable",
+                                        "schema": [],
+                                        "typeProperties": {
+                                            "table": "skybitz_TrailerLocations"
+                                        }
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
                                     }
                                 }
-                            },
-                            "type": "KustoDatabaseTable",
-                            "schema": [],
-                            "typeProperties": {
-                                "table": "skybitz_TrailerLocations"
                             }
                         }
-                    },
-                    "enableStaging": false,
-                    "translator": {
-                        "type": "TabularTranslator",
-                        "typeConversion": true,
-                        "typeConversionSettings": {
-                            "allowDataTruncation": true,
-                            "treatBooleanAsNumber": false
-                        }
-                    }
+                    ]
                 }
             }
         ],
+        "parameters": {
+            "list": {
+                "type": "array",
+                "defaultValue": [
+                    {
+                        "startofmonth": "2021-04-01 00:00:00.000",
+                        "endofmonth": "2021-04-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-05-01 00:00:00.000",
+                        "endofmonth": "2021-05-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-06-01 00:00:00.000",
+                        "endofmonth": "2021-06-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-07-01 00:00:00.000",
+                        "endofmonth": "2021-07-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-08-01 00:00:00.000",
+                        "endofmonth": "2021-08-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-09-01 00:00:00.000",
+                        "endofmonth": "2021-09-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-10-01 00:00:00.000",
+                        "endofmonth": "2021-10-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-11-01 00:00:00.000",
+                        "endofmonth": "2021-11-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2021-12-01 00:00:00.000",
+                        "endofmonth": "2021-12-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-01-01 00:00:00.000",
+                        "endofmonth": "2022-01-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-02-01 00:00:00.000",
+                        "endofmonth": "2022-02-28 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-03-01 00:00:00.000",
+                        "endofmonth": "2022-03-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-04-01 00:00:00.000",
+                        "endofmonth": "2022-04-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-05-01 00:00:00.000",
+                        "endofmonth": "2022-05-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-06-01 00:00:00.000",
+                        "endofmonth": "2022-06-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-07-01 00:00:00.000",
+                        "endofmonth": "2022-07-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-08-01 00:00:00.000",
+                        "endofmonth": "2022-08-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-09-01 00:00:00.000",
+                        "endofmonth": "2022-09-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-10-01 00:00:00.000",
+                        "endofmonth": "2022-10-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-11-01 00:00:00.000",
+                        "endofmonth": "2022-11-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2022-12-01 00:00:00.000",
+                        "endofmonth": "2022-12-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-01-01 00:00:00.000",
+                        "endofmonth": "2023-01-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-02-01 00:00:00.000",
+                        "endofmonth": "2023-02-28 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-03-01 00:00:00.000",
+                        "endofmonth": "2023-03-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-04-01 00:00:00.000",
+                        "endofmonth": "2023-04-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-05-01 00:00:00.000",
+                        "endofmonth": "2023-05-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-06-01 00:00:00.000",
+                        "endofmonth": "2023-06-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-07-01 00:00:00.000",
+                        "endofmonth": "2023-07-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-08-01 00:00:00.000",
+                        "endofmonth": "2023-08-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-09-01 00:00:00.000",
+                        "endofmonth": "2023-09-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-10-01 00:00:00.000",
+                        "endofmonth": "2023-10-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-11-01 00:00:00.000",
+                        "endofmonth": "2023-11-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2023-12-01 00:00:00.000",
+                        "endofmonth": "2023-12-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-01-01 00:00:00.000",
+                        "endofmonth": "2024-01-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-02-01 00:00:00.000",
+                        "endofmonth": "2024-02-29 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-03-01 00:00:00.000",
+                        "endofmonth": "2024-03-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-04-01 00:00:00.000",
+                        "endofmonth": "2024-04-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-05-01 00:00:00.000",
+                        "endofmonth": "2024-05-31 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-06-01 00:00:00.000",
+                        "endofmonth": "2024-06-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-07-01 00:00:00.000",
+                        "endofmonth": "2024-07-31 23:59:59.999"
+                    }
+                ]
+            }
+        },
         "lastModifiedByObjectId": "242268c9-af14-4b3a-bfa1-50a8e45de0fc",
-        "lastPublishTime": "2024-07-01T20:02:42Z"
+        "lastPublishTime": "2024-07-17T16:55:38Z"
     }
 }
