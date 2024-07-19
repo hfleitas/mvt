@@ -1,0 +1,25 @@
+.show table platsci_TelematicHeartbeats policy update 
+
+
+.clear table platsci_TelematicHeartbeats data 
+
+
+platsci_TelematicHeartbeats
+| take 10
+
+
+//run pipeline 
+
+.show table platsci_TelematicHeartbeats extents
+| project ExtentId, MaxCreatedOn, MinCreatedOn, RowCount
+| summarize sum(RowCount) by MaxCreatedOn
+| render areachart 
+
+
+
+platsci_TelematicHeartbeats
+| summarize max(Logged_At_UTC) //2024-07-17T14:22:34Z
+// | summarize max(Logged_At_MT)  //2234-10-11T11:35:09.591417Z
+// | summarize count() by bin(Logged_At_MT,1d)
+// | top 10 by Logged_At_MT desc
+
