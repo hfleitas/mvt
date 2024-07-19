@@ -1,0 +1,309 @@
+CREATE TABLE [platsci].[TelematicHeartbeats](
+	[TelematicHeartbeats_ID] [bigint] IDENTITY(1,1) NOT NULL,
+	[Data_Id] [varchar](25) NOT NULL,
+	[Unit_Number] [varchar](6) NULL,
+	[Unit_VIN] [varchar](25) NULL,
+	[Driver_Code] [varchar](6) NULL,
+	[Cvd_Id] [varchar](25) NULL,
+	[Tablet_Serial] [varchar](25) NULL,
+	[Event] [varchar](50) NOT NULL,
+	[Logged_At_UTC] [datetime] NOT NULL,
+	[Logged_At_MT] [datetime] NOT NULL,
+	[Heartbeat_Id] [varchar](25) NOT NULL,
+	[Speed] [numeric](10, 2) NULL,
+	[Odometer] [numeric](10, 2) NULL,
+	[Odometer_Jump] [numeric](10, 2) NULL,
+	[Heading] [int] NULL,
+	[Ignition] [bit] NULL,
+	[RPM] [numeric](10, 2) NULL,
+	[Engine_Hours] [numeric](10, 2) NULL,
+	[Engine_Hours_Jump] [numeric](10, 2) NULL,
+	[Wheels_In_Motion] [bit] NULL,
+	[Accuracy] [numeric](10, 2) NULL,
+	[Satellites] [int] NULL,
+	[GPS_Valid] [bit] NULL,
+	[HDOP] [int] NULL,
+	[Fuel_Level] [numeric](10, 2) NULL,
+	[Total_Fuel_Used] [numeric](18, 2) NULL,
+	[GPS_Latitude] [numeric](12, 6) NULL,
+	[GPS_Longitude] [numeric](12, 6) NULL,
+	[GPS_Description] [varchar](50) NULL,
+	[GPS_GeoPoint] [geography] NULL,
+	[Message_Id] [varchar](50) NULL,
+	[Consumer_Version] [varchar](25) NULL,
+	[Origin_Version] [varchar](25) NULL,
+	[Timestamp] [datetime] NULL,
+	[Ignore_Data_Flag] [bit] NULL,
+	[ETL_Load_Date_MT] [datetime] NULL,
+	[ETL_DW_PubRF_Load_Date] [datetime] NULL,
+	[GPS_State] [nchar](5) NULL,
+CONSTRAINT [PK_TelematicHeartbeats] PRIMARY KEY CLUSTERED 
+(
+	[Logged_At_MT] ASC,
+	[TelematicHeartbeats_ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+)
+GO
+ 
+ALTER TABLE [platsci].[TelematicHeartbeats] ADD  DEFAULT ((0)) FOR [Ignore_Data_Flag]
+GO
+
+
+.create table platsci_TelematicHeartbeats (
+TelematicHeartbeats_ID:long,
+Data_Id:string,
+Unit_Number:string,
+Unit_VIN:string,
+Driver_Code:string,
+Cvd_Id:string,
+Tablet_Serial:string,
+Event:string,
+Logged_At_UTC:datetime,
+Logged_At_MT:datetime,
+Heartbeat_Id:string,
+Speed:decimal,
+Odometer:decimal,
+Odometer_Jump:decimal,
+Heading:int,
+Ignition:bool,
+RPM:decimal,
+Engine_Hours:decimal,
+Engine_Hours_Jump:decimal,
+Wheels_In_Motion:bool,
+Accuracy:decimal,
+Satellites:int,
+GPS_Valid:bool,
+HDOP:int,
+Fuel_Level:decimal,
+Total_Fuel_Used:decimal,
+GPS_Latitude:decimal,
+GPS_Longitude:decimal,
+GPS_Description:string,
+GPS_GeoPoint:string,
+Message_Id:string,
+Consumer_Version:string,
+Origin_Version:string,
+Timestamp:datetime,
+Ignore_Data_Flag:bool,
+ETL_Load_Date_MT:datetime,
+ETL_DW_PubRF_Load_Date:datetime,
+GPS_State:string
+) with (folder='platsci')
+
+
+platsci_TelematicHeartbeats
+| getschema 
+
+platsci_TelematicHeartbeats
+| count
+
+.show ingestion failures 
+
+
+//fix table
+.alter table rawplatsci (
+ApplicationCode:string,
+MessageTimeStamp:datetime,
+OrderNumber:string,
+DispatchNumber:string,
+Unit:string,
+Driver1:string,
+Driver2:string,
+FormName:string,
+JsonData:dynamic,
+Event:string,
+OriginTimestamp:datetime,
+FullMessage:dynamic
+) with(folder='raw')
+
+// .alter table rawplatsci (data:string) with (folder='raw') //skybitz
+
+// .drop column rawplatsci.data ifexists
+
+rawplatsci
+| getschema 
+
+
+external_table("platsci_TelematicHeartbeats_3")
+| count //742618669
+
+external_table("platsci_TelematicHeartbeats_2")
+| summarize count() by bin(Logged_At_UTC,30d)
+
+.set-or-replace platsci_rage <| 
+external_table("platsci_TelematicHeartbeats_2")
+| summarize count() by startofmonth(Logged_At_UTC), endofmonth(Logged_At_UTC)
+| project StartOfMonth=Column1, EndOfMonth=Column2
+
+
+datatable(range:dynamic)[
+dynamic({"startofmonth": "2019-08-01T00:00:00Z", "endofmonth": "2019-08-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2019-09-01T00:00:00Z", "endofmonth": "2019-09-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2019-10-01T00:00:00Z", "endofmonth": "2019-10-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2019-11-01T00:00:00Z", "endofmonth": "2019-11-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2019-12-01T00:00:00Z", "endofmonth": "2019-12-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-01-01T00:00:00Z", "endofmonth": "2020-01-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-02-01T00:00:00Z", "endofmonth": "2020-02-29T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-03-01T00:00:00Z", "endofmonth": "2020-03-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-04-01T00:00:00Z", "endofmonth": "2020-04-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-05-01T00:00:00Z", "endofmonth": "2020-05-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-06-01T00:00:00Z", "endofmonth": "2020-06-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-07-01T00:00:00Z", "endofmonth": "2020-07-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-08-01T00:00:00Z", "endofmonth": "2020-08-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-09-01T00:00:00Z", "endofmonth": "2020-09-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-10-01T00:00:00Z", "endofmonth": "2020-10-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-11-01T00:00:00Z", "endofmonth": "2020-11-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2020-12-01T00:00:00Z", "endofmonth": "2020-12-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-01-01T00:00:00Z", "endofmonth": "2021-01-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-02-01T00:00:00Z", "endofmonth": "2021-02-28T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-03-01T00:00:00Z", "endofmonth": "2021-03-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-04-01T00:00:00Z", "endofmonth": "2021-04-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-05-01T00:00:00Z", "endofmonth": "2021-05-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-06-01T00:00:00Z", "endofmonth": "2021-06-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-07-01T00:00:00Z", "endofmonth": "2021-07-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-08-01T00:00:00Z", "endofmonth": "2021-08-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-09-01T00:00:00Z", "endofmonth": "2021-09-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-10-01T00:00:00Z", "endofmonth": "2021-10-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-11-01T00:00:00Z", "endofmonth": "2021-11-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2021-12-01T00:00:00Z", "endofmonth": "2021-12-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-01-01T00:00:00Z", "endofmonth": "2022-01-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-02-01T00:00:00Z", "endofmonth": "2022-02-28T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-03-01T00:00:00Z", "endofmonth": "2022-03-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-04-01T00:00:00Z", "endofmonth": "2022-04-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-05-01T00:00:00Z", "endofmonth": "2022-05-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-06-01T00:00:00Z", "endofmonth": "2022-06-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-07-01T00:00:00Z", "endofmonth": "2022-07-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-08-01T00:00:00Z", "endofmonth": "2022-08-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-09-01T00:00:00Z", "endofmonth": "2022-09-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-10-01T00:00:00Z", "endofmonth": "2022-10-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-11-01T00:00:00Z", "endofmonth": "2022-11-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2022-12-01T00:00:00Z", "endofmonth": "2022-12-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-01-01T00:00:00Z", "endofmonth": "2023-01-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-02-01T00:00:00Z", "endofmonth": "2023-02-28T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-03-01T00:00:00Z", "endofmonth": "2023-03-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-04-01T00:00:00Z", "endofmonth": "2023-04-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-05-01T00:00:00Z", "endofmonth": "2023-05-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-06-01T00:00:00Z", "endofmonth": "2023-06-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-07-01T00:00:00Z", "endofmonth": "2023-07-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-08-01T00:00:00Z", "endofmonth": "2023-08-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-09-01T00:00:00Z", "endofmonth": "2023-09-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-10-01T00:00:00Z", "endofmonth": "2023-10-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-11-01T00:00:00Z", "endofmonth": "2023-11-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2023-12-01T00:00:00Z", "endofmonth": "2023-12-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-01-01T00:00:00Z", "endofmonth": "2024-01-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-02-01T00:00:00Z", "endofmonth": "2024-02-29T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-03-01T00:00:00Z", "endofmonth": "2024-03-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-04-01T00:00:00Z", "endofmonth": "2024-04-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-05-01T00:00:00Z", "endofmonth": "2024-05-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-06-01T00:00:00Z", "endofmonth": "2024-06-30T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2024-07-01T00:00:00Z", "endofmonth": "2024-07-31T23:59:59.9999999Z"})
+]
+| project startofmonth=todatetime(range.startofmonth), endofmonth=todatetime(range.endofmonth)
+| sort by startofmonth asc
+| project startofmonth=trim_end('.{5}$',replace_string(tostring(startofmonth),'T',' ')), endofmonth=trim_end('.{5}$',replace_string(tostring(endofmonth),'T',' '))
+| project bag=bag_pack_columns(startofmonth,endofmonth)
+| summarize make_list(bag)
+
+
+//example
+datatable(range:dynamic)[
+dynamic({"startofmonth": "2019-08-01T00:00:00Z", "endofmonth": "2019-08-31T23:59:59.9999999Z"}),
+dynamic({"startofmonth": "2019-09-01T00:00:00Z", "endofmonth": "2019-09-30T23:59:59.9999999Z"})
+]
+// | summarize make_list(range)
+| project startofmonth=todatetime(range.startofmonth), endofmonth=todatetime(range.endofmonth)
+| sort by startofmonth asc
+| project startofmonth=trim_end('.{5}$',replace_string(tostring(startofmonth),'T',' ')), endofmonth=trim_end('.{5}$',replace_string(tostring(endofmonth),'T',' '))
+| project bag=bag_pack_columns(startofmonth,endofmonth)
+| summarize make_list(bag)
+
+
+
+[{"startofmonth":"2019-08-01 00:00:00.000","endofmonth":"2019-08-31 23:59:59.999"},{"startofmonth":"2019-09-01 00:00:00.000","endofmonth":"2019-09-30 23:59:59.999"},{"startofmonth":"2019-10-01 00:00:00.000","endofmonth":"2019-10-31 23:59:59.999"},{"startofmonth":"2019-11-01 00:00:00.000","endofmonth":"2019-11-30 23:59:59.999"},{"startofmonth":"2019-12-01 00:00:00.000","endofmonth":"2019-12-31 23:59:59.999"},{"startofmonth":"2020-01-01 00:00:00.000","endofmonth":"2020-01-31 23:59:59.999"},{"startofmonth":"2020-02-01 00:00:00.000","endofmonth":"2020-02-29 23:59:59.999"},{"startofmonth":"2020-03-01 00:00:00.000","endofmonth":"2020-03-31 23:59:59.999"},{"startofmonth":"2020-04-01 00:00:00.000","endofmonth":"2020-04-30 23:59:59.999"},{"startofmonth":"2020-05-01 00:00:00.000","endofmonth":"2020-05-31 23:59:59.999"},{"startofmonth":"2020-06-01 00:00:00.000","endofmonth":"2020-06-30 23:59:59.999"},{"startofmonth":"2020-07-01 00:00:00.000","endofmonth":"2020-07-31 23:59:59.999"},{"startofmonth":"2020-08-01 00:00:00.000","endofmonth":"2020-08-31 23:59:59.999"},{"startofmonth":"2020-09-01 00:00:00.000","endofmonth":"2020-09-30 23:59:59.999"},{"startofmonth":"2020-10-01 00:00:00.000","endofmonth":"2020-10-31 23:59:59.999"},{"startofmonth":"2020-11-01 00:00:00.000","endofmonth":"2020-11-30 23:59:59.999"},{"startofmonth":"2020-12-01 00:00:00.000","endofmonth":"2020-12-31 23:59:59.999"},{"startofmonth":"2021-01-01 00:00:00.000","endofmonth":"2021-01-31 23:59:59.999"},{"startofmonth":"2021-02-01 00:00:00.000","endofmonth":"2021-02-28 23:59:59.999"},{"startofmonth":"2021-03-01 00:00:00.000","endofmonth":"2021-03-31 23:59:59.999"},{"startofmonth":"2021-04-01 00:00:00.000","endofmonth":"2021-04-30 23:59:59.999"},{"startofmonth":"2021-05-01 00:00:00.000","endofmonth":"2021-05-31 23:59:59.999"},{"startofmonth":"2021-06-01 00:00:00.000","endofmonth":"2021-06-30 23:59:59.999"},{"startofmonth":"2021-07-01 00:00:00.000","endofmonth":"2021-07-31 23:59:59.999"},{"startofmonth":"2021-08-01 00:00:00.000","endofmonth":"2021-08-31 23:59:59.999"},{"startofmonth":"2021-09-01 00:00:00.000","endofmonth":"2021-09-30 23:59:59.999"},{"startofmonth":"2021-10-01 00:00:00.000","endofmonth":"2021-10-31 23:59:59.999"},{"startofmonth":"2021-11-01 00:00:00.000","endofmonth":"2021-11-30 23:59:59.999"},{"startofmonth":"2021-12-01 00:00:00.000","endofmonth":"2021-12-31 23:59:59.999"},{"startofmonth":"2022-01-01 00:00:00.000","endofmonth":"2022-01-31 23:59:59.999"},{"startofmonth":"2022-02-01 00:00:00.000","endofmonth":"2022-02-28 23:59:59.999"},{"startofmonth":"2022-03-01 00:00:00.000","endofmonth":"2022-03-31 23:59:59.999"},{"startofmonth":"2022-04-01 00:00:00.000","endofmonth":"2022-04-30 23:59:59.999"},{"startofmonth":"2022-05-01 00:00:00.000","endofmonth":"2022-05-31 23:59:59.999"},{"startofmonth":"2022-06-01 00:00:00.000","endofmonth":"2022-06-30 23:59:59.999"},{"startofmonth":"2022-07-01 00:00:00.000","endofmonth":"2022-07-31 23:59:59.999"},{"startofmonth":"2022-08-01 00:00:00.000","endofmonth":"2022-08-31 23:59:59.999"},{"startofmonth":"2022-09-01 00:00:00.000","endofmonth":"2022-09-30 23:59:59.999"},{"startofmonth":"2022-10-01 00:00:00.000","endofmonth":"2022-10-31 23:59:59.999"},{"startofmonth":"2022-11-01 00:00:00.000","endofmonth":"2022-11-30 23:59:59.999"},{"startofmonth":"2022-12-01 00:00:00.000","endofmonth":"2022-12-31 23:59:59.999"},{"startofmonth":"2023-01-01 00:00:00.000","endofmonth":"2023-01-31 23:59:59.999"},{"startofmonth":"2023-02-01 00:00:00.000","endofmonth":"2023-02-28 23:59:59.999"},{"startofmonth":"2023-03-01 00:00:00.000","endofmonth":"2023-03-31 23:59:59.999"},{"startofmonth":"2023-04-01 00:00:00.000","endofmonth":"2023-04-30 23:59:59.999"},{"startofmonth":"2023-05-01 00:00:00.000","endofmonth":"2023-05-31 23:59:59.999"},{"startofmonth":"2023-06-01 00:00:00.000","endofmonth":"2023-06-30 23:59:59.999"},{"startofmonth":"2023-07-01 00:00:00.000","endofmonth":"2023-07-31 23:59:59.999"},{"startofmonth":"2023-08-01 00:00:00.000","endofmonth":"2023-08-31 23:59:59.999"},{"startofmonth":"2023-09-01 00:00:00.000","endofmonth":"2023-09-30 23:59:59.999"},{"startofmonth":"2023-10-01 00:00:00.000","endofmonth":"2023-10-31 23:59:59.999"},{"startofmonth":"2023-11-01 00:00:00.000","endofmonth":"2023-11-30 23:59:59.999"},{"startofmonth":"2023-12-01 00:00:00.000","endofmonth":"2023-12-31 23:59:59.999"},{"startofmonth":"2024-01-01 00:00:00.000","endofmonth":"2024-01-31 23:59:59.999"},{"startofmonth":"2024-02-01 00:00:00.000","endofmonth":"2024-02-29 23:59:59.999"},{"startofmonth":"2024-03-01 00:00:00.000","endofmonth":"2024-03-31 23:59:59.999"},{"startofmonth":"2024-04-01 00:00:00.000","endofmonth":"2024-04-30 23:59:59.999"},{"startofmonth":"2024-05-01 00:00:00.000","endofmonth":"2024-05-31 23:59:59.999"},{"startofmonth":"2024-06-01 00:00:00.000","endofmonth":"2024-06-30 23:59:59.999"}]
+
+[
+{"startofmonth":"2019-08-01 00:00:00.000","endofmonth":"2019-08-31 23:59:59.999"},
+{"startofmonth":"2019-09-01 00:00:00.000","endofmonth":"2019-09-30 23:59:59.999"},
+{"startofmonth":"2019-10-01 00:00:00.000","endofmonth":"2019-10-31 23:59:59.999"},
+{"startofmonth":"2019-11-01 00:00:00.000","endofmonth":"2019-11-30 23:59:59.999"},
+{"startofmonth":"2019-12-01 00:00:00.000","endofmonth":"2019-12-31 23:59:59.999"},
+{"startofmonth":"2020-01-01 00:00:00.000","endofmonth":"2020-01-31 23:59:59.999"},
+{"startofmonth":"2020-02-01 00:00:00.000","endofmonth":"2020-02-29 23:59:59.999"},
+{"startofmonth":"2020-03-01 00:00:00.000","endofmonth":"2020-03-31 23:59:59.999"},
+{"startofmonth":"2020-04-01 00:00:00.000","endofmonth":"2020-04-30 23:59:59.999"},
+{"startofmonth":"2020-05-01 00:00:00.000","endofmonth":"2020-05-31 23:59:59.999"},
+{"startofmonth":"2020-06-01 00:00:00.000","endofmonth":"2020-06-30 23:59:59.999"},
+{"startofmonth":"2020-07-01 00:00:00.000","endofmonth":"2020-07-31 23:59:59.999"},
+{"startofmonth":"2020-08-01 00:00:00.000","endofmonth":"2020-08-31 23:59:59.999"},
+{"startofmonth":"2020-09-01 00:00:00.000","endofmonth":"2020-09-30 23:59:59.999"},
+{"startofmonth":"2020-10-01 00:00:00.000","endofmonth":"2020-10-31 23:59:59.999"},
+{"startofmonth":"2020-11-01 00:00:00.000","endofmonth":"2020-11-30 23:59:59.999"},
+{"startofmonth":"2020-12-01 00:00:00.000","endofmonth":"2020-12-31 23:59:59.999"},
+{"startofmonth":"2021-01-01 00:00:00.000","endofmonth":"2021-01-31 23:59:59.999"},
+{"startofmonth":"2021-02-01 00:00:00.000","endofmonth":"2021-02-28 23:59:59.999"},
+{"startofmonth":"2021-03-01 00:00:00.000","endofmonth":"2021-03-31 23:59:59.999"},
+{"startofmonth":"2021-04-01 00:00:00.000","endofmonth":"2021-04-30 23:59:59.999"},
+{"startofmonth":"2021-05-01 00:00:00.000","endofmonth":"2021-05-31 23:59:59.999"},
+{"startofmonth":"2021-06-01 00:00:00.000","endofmonth":"2021-06-30 23:59:59.999"},
+{"startofmonth":"2021-07-01 00:00:00.000","endofmonth":"2021-07-31 23:59:59.999"},
+{"startofmonth":"2021-08-01 00:00:00.000","endofmonth":"2021-08-31 23:59:59.999"},
+{"startofmonth":"2021-09-01 00:00:00.000","endofmonth":"2021-09-30 23:59:59.999"},
+{"startofmonth":"2021-10-01 00:00:00.000","endofmonth":"2021-10-31 23:59:59.999"},
+{"startofmonth":"2021-11-01 00:00:00.000","endofmonth":"2021-11-30 23:59:59.999"},
+{"startofmonth":"2021-12-01 00:00:00.000","endofmonth":"2021-12-31 23:59:59.999"},
+{"startofmonth":"2022-01-01 00:00:00.000","endofmonth":"2022-01-31 23:59:59.999"},
+{"startofmonth":"2022-02-01 00:00:00.000","endofmonth":"2022-02-28 23:59:59.999"},
+{"startofmonth":"2022-03-01 00:00:00.000","endofmonth":"2022-03-31 23:59:59.999"},
+{"startofmonth":"2022-04-01 00:00:00.000","endofmonth":"2022-04-30 23:59:59.999"},
+{"startofmonth":"2022-05-01 00:00:00.000","endofmonth":"2022-05-31 23:59:59.999"},
+{"startofmonth":"2022-06-01 00:00:00.000","endofmonth":"2022-06-30 23:59:59.999"},
+{"startofmonth":"2022-07-01 00:00:00.000","endofmonth":"2022-07-31 23:59:59.999"},
+{"startofmonth":"2022-08-01 00:00:00.000","endofmonth":"2022-08-31 23:59:59.999"},
+{"startofmonth":"2022-09-01 00:00:00.000","endofmonth":"2022-09-30 23:59:59.999"},
+{"startofmonth":"2022-10-01 00:00:00.000","endofmonth":"2022-10-31 23:59:59.999"},
+{"startofmonth":"2022-11-01 00:00:00.000","endofmonth":"2022-11-30 23:59:59.999"},
+{"startofmonth":"2022-12-01 00:00:00.000","endofmonth":"2022-12-31 23:59:59.999"},
+{"startofmonth":"2023-01-01 00:00:00.000","endofmonth":"2023-01-31 23:59:59.999"},
+{"startofmonth":"2023-02-01 00:00:00.000","endofmonth":"2023-02-28 23:59:59.999"},
+{"startofmonth":"2023-03-01 00:00:00.000","endofmonth":"2023-03-31 23:59:59.999"},
+{"startofmonth":"2023-04-01 00:00:00.000","endofmonth":"2023-04-30 23:59:59.999"},
+{"startofmonth":"2023-05-01 00:00:00.000","endofmonth":"2023-05-31 23:59:59.999"},
+{"startofmonth":"2023-06-01 00:00:00.000","endofmonth":"2023-06-30 23:59:59.999"},
+{"startofmonth":"2023-07-01 00:00:00.000","endofmonth":"2023-07-31 23:59:59.999"},
+{"startofmonth":"2023-08-01 00:00:00.000","endofmonth":"2023-08-31 23:59:59.999"},
+{"startofmonth":"2023-09-01 00:00:00.000","endofmonth":"2023-09-30 23:59:59.999"},
+{"startofmonth":"2023-10-01 00:00:00.000","endofmonth":"2023-10-31 23:59:59.999"},
+{"startofmonth":"2023-11-01 00:00:00.000","endofmonth":"2023-11-30 23:59:59.999"},
+{"startofmonth":"2023-12-01 00:00:00.000","endofmonth":"2023-12-31 23:59:59.999"},
+{"startofmonth":"2024-01-01 00:00:00.000","endofmonth":"2024-01-31 23:59:59.999"},
+{"startofmonth":"2024-02-01 00:00:00.000","endofmonth":"2024-02-29 23:59:59.999"},
+{"startofmonth":"2024-03-01 00:00:00.000","endofmonth":"2024-03-31 23:59:59.999"},
+{"startofmonth":"2024-04-01 00:00:00.000","endofmonth":"2024-04-30 23:59:59.999"},
+{"startofmonth":"2024-05-01 00:00:00.000","endofmonth":"2024-05-31 23:59:59.999"},
+{"startofmonth":"2024-06-01 00:00:00.000","endofmonth":"2024-06-30 23:59:59.999"}
+]
+
+// logical partitioning
+
+.show table platsci_TelematicHeartbeats extents
+
+platsci_TelematicHeartbeats | count
+
+.clear table platsci_TelematicHeartbeats data
+
+datatable (StartOfMonth: datetime, EndOfMonth: datetime) [
+    datetime(2021-01-01T00:00:00Z),datetime(2021-01-31T23:59:59.9999999Z),
+    datetime(2021-02-01T00:00:00Z),datetime(2021-02-28T23:59:59.9999999Z),
+    datetime(2021-06-01T00:00:00Z),datetime(2021-06-30T23:59:59.9999999Z),
+    datetime(2022-04-01T00:00:00Z),datetime(2022-04-30T23:59:59.9999999Z),
+    datetime(2022-05-01T00:00:00Z),datetime(2022-05-31T23:59:59.9999999Z),
+    datetime(2022-07-01T00:00:00Z),datetime(2022-07-31T23:59:59.9999999Z),
+    datetime(2022-08-01T00:00:00Z),datetime(2022-08-31T23:59:59.9999999Z),
+    datetime(2022-10-01T00:00:00Z),datetime(2022-10-31T23:59:59.9999999Z),
+    datetime(2023-07-01T00:00:00Z),datetime(2023-07-31T23:59:59.9999999Z),
+    datetime(2023-08-01T00:00:00Z),datetime(2023-08-31T23:59:59.9999999Z)
+]
+
+.drop table platsci_rage ifexists 
+
+
