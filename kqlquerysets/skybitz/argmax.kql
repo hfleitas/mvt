@@ -1,0 +1,42 @@
+// https://learn.microsoft.com/en-us/azure/data-explorer/kusto/query/arg-max-aggregation-function
+
+
+//fruit ninja
+datatable (Fruit:string, Color:string, Version:int) [
+    "Apple", "Red", 1,
+    "Apple", "Green", int(null),
+    "Banana", "Yellow", int(null),
+    "Banana", "Green", int(null),
+    "Pear", "Brown", 1,
+    "Pear", "Green", 2,
+]
+| summarize arg_max(Version, *) by Fruit
+
+
+
+datatable (fruit:string, color:string, dt:datetime)[
+    "Apple", "Red", datetime(2024-01-01),
+    "Apple", "Green", datetime(2024-01-01),
+    "Banana", "Yellow", datetime(2024-01-01),
+    "Banana", "Green", datetime(2024-01-01),
+    "Pear", "Brown", datetime(2024-01-01),
+    "Pear", "Green", datetime(2024-01-01)
+]
+| summarize arg_max(dt, *) by fruit
+
+
+
+//iot ninja
+datatable(dt:datetime, sensor:string, value:real)[
+datetime('2022-04-13T01:03:52.789706Z'), 	'sensor-56', 	0.79677697464875774,
+datetime('2022-04-13T01:03:53.006706Z'), 	'sensor-56', 	0.58898922007817234,
+datetime('2022-04-13T01:03:52.904771Z'), 	'sensor-47', 	0.467346961687028,
+datetime('2022-04-13T01:03:53.151771Z'), 	'sensor-47', 	0.46213222252077846,
+datetime('2022-04-13T01:03:53.362338Z'), 	'sensor-82', 	0.8168483546548001,
+datetime('2022-04-13T01:03:53.642338Z'), 	'sensor-82', 	0.051296364276567481,
+datetime('2022-04-13T01:03:53.39372Z'), 	'sensor-24', 	0.6872429275376607,
+datetime('2022-04-13T01:03:53.54772Z'), 	'sensor-24', 	0.14859804491320727,
+datetime('2022-04-13T01:03:53.144806Z'), 	'sensor-130', 	0.016883112467987793,
+datetime('2022-04-13T01:03:53.698806Z'), 	'sensor-130', 	0.015842471911214129
+]
+| summarize arg_max(dt,*) by sensor
