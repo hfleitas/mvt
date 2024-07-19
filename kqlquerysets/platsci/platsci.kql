@@ -1,0 +1,29 @@
+rawplatsci
+| count
+
+rawplatsci
+| take 10
+
+rawplatsci
+| where isnotempty(MessageTimeStamp) == true
+| summarize count() by bin(todatetime(MessageTimeStamp),1d)
+| order by MessageTimeStamp asc
+| render timechart
+
+
+rawplatsci
+| make-series count() on todatetime(MessageTimeStamp) step 1d
+// | make-series count() on MessageTimeStamp from ago(24h) to now()+60m step 1m 
+// | extend forecast = series_decompose_forecast(count_, 60)
+| render timechart 
+
+rawplatsci
+| summarize min(todatetime(MessageTimeStamp))
+
+.show streamingingestion failures
+
+.show table rawplatsci extents
+
+
+external_table("platsci_TelematicHeartbeats_1")
+| getschema 
