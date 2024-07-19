@@ -13,7 +13,6 @@
                         "type": "Expression"
                     },
                     "isSequential": false,
-                    "batchCount": 50,
                     "activities": [
                         {
                             "name": "platsci_TelematicHeartbeats",
@@ -30,7 +29,7 @@
                                 "source": {
                                     "type": "SqlServerSource",
                                     "sqlReaderQuery": {
-                                        "value": "@concat('Select \nTelematicHeartbeats_ID,\nData_Id,\nUnit_Number\nUnit_VIN,\nDriver_Code,\nCvd_Id,\nTablet_Serial,\nEvent,\nLogged_At_UTC,\nLogged_At_MT,\nHeartbeat_Id,\nSpeed,\nOdometer,\nOdometer_Jump,\nHeading,\nIgnition,\nRPM,\nEngine_Hours,\nEngine_Hours_Jump,\nWheels_In_Motion,\nAccuracy,\nSatellites,\nGPS_Valid,\nHDOP,\nFuel_Level,\nTotal_Fuel_Used,\nGPS_Latitude,\nGPS_Longitude,\nGPS_Description,\ncast(GPS_GeoPoint as varchar(max)),\nMessage_Id,\nConsumer_Version,\nOrigin_Version,\nTimestamp,\nIgnore_Data_Flag,\nETL_Load_Date_MT,\nETL_DW_PubRF_Load_Date,\nGPS_State\nfrom platsci.TelematicHeartbeats with(nolock)\nwhere Logged_At_UTC >= ''',item().startofmonth,''' and Logged_At_UTC <= ''',item().endofmonth,''''\n)",
+                                        "value": "@concat('Select \nTelematicHeartbeats_ID,\nData_Id,\nUnit_Number,\nUnit_VIN,\nDriver_Code,\nCvd_Id,\nTablet_Serial,\nEvent,\nLogged_At_UTC,\nLogged_At_MT,\nHeartbeat_Id,\nSpeed,\nOdometer,\nOdometer_Jump,\nHeading,\nIgnition,\nRPM,\nEngine_Hours,\nEngine_Hours_Jump,\nWheels_In_Motion,\nAccuracy,\nSatellites,\nGPS_Valid,\nHDOP,\nFuel_Level,\nTotal_Fuel_Used,\nGPS_Latitude,\nGPS_Longitude,\nGPS_Description,\ncast(GPS_GeoPoint as varchar(max)) as GPS_GeoPoint,\nMessage_Id,\nConsumer_Version,\nOrigin_Version,\nTimestamp,\nIgnore_Data_Flag,\nETL_Load_Date_MT,\nETL_DW_PubRF_Load_Date,\nGPS_State\nfrom platsci.TelematicHeartbeats with(nolock)\nwhere Logged_At_UTC >= ''',item().startofmonth,''' and Logged_At_UTC <= ''',item().endofmonth,''''\n)",
                                         "type": "Expression"
                                     },
                                     "queryTimeout": "02:00:00",
@@ -330,19 +329,15 @@
                     {
                         "startofmonth": "2024-06-01 00:00:00.000",
                         "endofmonth": "2024-06-30 23:59:59.999"
+                    },
+                    {
+                        "startofmonth": "2024-07-01 00:00:00.000",
+                        "endofmonth": "2024-07-31 23:59:59.999"
                     }
                 ]
             }
         },
-        "variables": {
-            "som": {
-                "type": "String"
-            },
-            "eom": {
-                "type": "String"
-            }
-        },
         "lastModifiedByObjectId": "242268c9-af14-4b3a-bfa1-50a8e45de0fc",
-        "lastPublishTime": "2024-07-01T21:04:22Z"
+        "lastPublishTime": "2024-07-19T01:50:02Z"
     }
 }
