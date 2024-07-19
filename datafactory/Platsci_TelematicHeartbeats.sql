@@ -1,7 +1,7 @@
 Select 
 TelematicHeartbeats_ID,
 Data_Id,
-Unit_Number
+Unit_Number,
 Unit_VIN,
 Driver_Code,
 Cvd_Id,
@@ -28,7 +28,7 @@ Total_Fuel_Used,
 GPS_Latitude,
 GPS_Longitude,
 GPS_Description,
-cast(GPS_GeoPoint as varchar(max)),
+cast(GPS_GeoPoint as varchar(max)) as GPS_GeoPoint,
 Message_Id,
 Consumer_Version,
 Origin_Version,
