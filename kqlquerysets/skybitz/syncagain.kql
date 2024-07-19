@@ -1,0 +1,128 @@
+skybitz_TrailerLocations
+// | summarize count() by bin(sbt_messagetimestampmst,1d) //max day 2024-07-15T00:00:00Z (mst) 82465
+| summarize count() by bin(etl_timestampUTC,1d) //max day 2024-07-16T00:00:00Z (utc) 18397
+
+
+skybitz_TrailerLocations
+// | summarize max(sbt_messagetimestampmst) //2024-07-15T22:24:04Z
+| summarize max(etl_timestampUTC) //2024-07-16T04:24:42.483Z
+
+
+.alter table skybitz_TrailerLocations policy update 
+```
+[
+  {
+    "IsEnabled": true,
+    "Source": "rawskybitz",
+    "Query": "fn_sbt_TrailerLocations",
+    "IsTransactional": false,
+    "PropagateIngestionProperties": true,
+    "ManagedIdentity": null
+  }
+]
+```
+
+
+// 8fae06bb-cb2a-4255-9d00-68eb76204e1b 7/16
+// 2dd4e494-aac8-4f4a-9a3d-7c14dc2a93be 7/17fn_sbt_TrailerLocations
+
+.append async skybitz_TrailerLocations with (tags='["append 2024-07-17"]') <|
+rawskybitz
+| where ingestion_time() between (startofday(datetime(2024-07-17)) .. endofday(datetime(2024-07-17)))
+| extend payload=parse_xml(data)
+| project-away data
+| extend 
+    sbt_mtsn=tostring(payload.skybitz.gls.mtsn),
+    sbt_assetid=tostring(payload.skybitz.gls.asset.assetid),
+    sbt_messagetype=tostring(payload.skybitz.gls.messagetype),
+    ts=tostring(payload.skybitz.gls.['time']),
+    binary=todynamic(payload.skybitz.gls.binary),
+    sbt_extpwr=toint(payload.skybitz.gls.extpwr),
+    serial=todynamic(payload.skybitz.gls.serial),
+    sbt_latitude=todecimal(payload.skybitz.gls.latitude),
+    sbt_longitude=todecimal(payload.skybitz.gls.longitude),
+    sbt_battery=tostring(payload.skybitz.gls.battery),
+    sbt_quality=toint(payload.skybitz.gls.quality),
+    sbt_geoname=tostring(payload.skybitz.gls.landmark.geoname),
+    sbt_city=tostring(payload.skybitz.gls.landmark.city),
+    sbt_state=tostring(payload.skybitz.gls.landmark.state),
+    sbt_country=tostring(payload.skybitz.gls.landmark.country),
+    sbt_geotypename=tostring(payload.skybitz.gls.landmark.geotypename),
+    sbt_idlestatus=tostring(payload.skybitz.gls.idle.idlestatus),
+    sbt_idleduration=todecimal(payload.skybitz.gls.idle.idleduration),
+    sbt_idlegap=todecimal(payload.skybitz.gls.idle.idlegap),
+    sbt_skyfencestatus=tostring(payload.skybitz.gls.skyfence.skyfencestatus),
+    sbt_speed=tostring(payload.skybitz.gls.speed),
+    sbt_heading=tostring(payload.skybitz.gls.heading),
+    sbt_transid=tostring(payload.skybitz.gls.transid),
+    etl_timestampUTC=ingestion_time()
+//fix ts
+| parse ts with ts_year:long "/" ts_month:long "/" ts_day:long " " ts_hour:long ":" ts_minute:long ":" ts_second:long
+| extend ts = make_datetime(ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second)
+| extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
+| project-away ts, ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second
+//binary
+// In case array_length is null, its a single entry so we convert it to array.
+| extend binary = parse_json(case(isnull(array_length(binary)), pack_array(binary), binary))
+| mv-apply binary to typeof(dynamic) on
+(
+    project sbt_tetherstate=case(binary.inputname == "Tether", binary.inputstate, dynamic(null)),
+            sbt_tirestate=case(binary.inputname == "Tire System", binary.inputstate, dynamic(null))
+    | summarize take_any(tostring(sbt_tetherstate)), take_any(tostring(sbt_tirestate))
+)
+//serial
+| extend serial = parse_json(case(isnull(array_length(serial)), pack_array(serial), serial))
+| mv-apply serial to typeof(dynamic) on
+(
+    project sbt_movementstate=case(serial.serialname == "Motion", serial.serialdata, dynamic(null)),
+            sbt_cargostate=case(serial.serialname == "Cargo" or serial.serialname == "Volumetric", serial.serialdata, dynamic(null))
+    | summarize take_any(tostring(sbt_movementstate)), take_any(tostring(sbt_cargostate))
+)
+| project 
+    sbt_mtsn, 
+    sbt_assetid, 
+    sbt_messagetype,
+    sbt_messagetimestampmst,
+    sbt_tetherstate,
+    sbt_tirestate,
+    sbt_extpwr,
+    sbt_movementstate,
+    sbt_cargostate,
+    sbt_latitude,
+    sbt_longitude,
+    sbt_battery,
+    sbt_quality,
+    sbt_geoname,
+    sbt_city,
+    sbt_state,
+    sbt_country,
+    sbt_geotypename,
+    sbt_idlestatus,
+    sbt_idleduration,
+    sbt_idlegap,
+    sbt_skyfencestatus,
+    sbt_speed,
+    sbt_heading,
+    sbt_transid,
+    etl_timestampUTC,
+    CurrentRow=toint(0)
+
+
+
+.show operations | where OperationId in(
+'8fae06bb-cb2a-4255-9d00-68eb76204e1b',
+'2dd4e494-aac8-4f4a-9a3d-7c14dc2a93be')
+| summarize dcount(OperationId) by State //2 inprogress & completed 😁
+
+
+.show table skybitz_TrailerLocations extents 
+| where isnotempty(Tags)
+
+
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime('6/20/2024')
+| extend t=extent_tags()
+| where t has 'append'
+| summarize count() by tostring(t)
+| summarize sum(count_), sum(array_length(todynamic(t))) //175089 rows, 2days! 😁
+
