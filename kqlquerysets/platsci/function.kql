@@ -72,19 +72,38 @@ GPS_State:string
 .create-or-alter function with(folder='platsci') fn_platsci_TelematicHeartbeats() { 
 let maxid=toscalar(platsci_TelematicHeartbeats | summarize max(TelematicHeartbeats_ID)); //to increment TelematicHeartbeats_ID
 rawplatsci
-// | take 500
 | project todynamic(FullMessage)
 | order by isnull(true) //must sort for row_number()
 | extend 
     TelematicHeartbeats_ID=tolong(maxid+row_number()),
-    Data_Id=tostring(FullMessage.data.id),
+    Data_Id=tostring(FullMessage.data.id)
+| mv-apply data=FullMessage.data.relationships.assets.data to typeof(dynamic) on
+(
+    project 
+        Unit_Number=case(data.type == "power_unit", data.attributes.external_id, dynamic(null)),
+        Unit_VIN=case(data.type == "power_unit", data.attributes.hardware_id, dynamic(null))
+    | summarize take_any(tostring(Unit_Number)), take_any(tostring(Unit_VIN))
+)
+| mv-apply data=FullMessage.data.relationships.users.data to typeof(dynamic) on
+(
+    project Driver_Code=case(data.type == "user", data.attributes.external_id, dynamic(null))
+    | summarize take_any(tostring(Driver_Code))
+)
+| mv-apply data=FullMessage.data.relationships.devices.data to typeof(dynamic) on
+(
+    project 
+        Cvd_Id=case(data.type == "cvd", data.id, dynamic(null)),
+        Tablet_Serial=case(data.type == "tablet", data.attributes.serial, dynamic(null))
+    | summarize take_any(tostring(Cvd_Id)), take_any(tostring(Tablet_Serial))
+)
+| extend
     //////////////////////
-    //change to mv-apply//
-    Unit_Number=FullMessage.data.relationships.assets.data[0].attributes.external_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.ExternalId,
-    Unit_VIN=FullMessage.data.relationships.assets.data[0].attributes.hardware_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.HardwareId,
-    Driver_Code=FullMessage.data.relationships.users.data[0].attributes.external_id, //user = message.Data.Relationships.Users.Data.FirstOrDefault(d => d.Type == "user"); user?.Attributes.ExternalId;
-    Cvd_Id=FullMessage.data.relationships.devices.data[0].id, //cvd = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "cvd"); //cvd?.Id,
-    Tablet_Serial=FullMessage.data.relationships.devices.data[1].attributes.serial, //tablet = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "tablet"); //tablet?.Attributes?.Serial
+    //changed to mv-apply//
+    // Unit_Number=FullMessage.data.relationships.assets.data[0].attributes.external_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.ExternalId,
+    // Unit_VIN=FullMessage.data.relationships.assets.data[0].attributes.hardware_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.HardwareId,
+    // Driver_Code=FullMessage.data.relationships.users.data[0].attributes.external_id, //user = message.Data.Relationships.Users.Data.FirstOrDefault(d => d.Type == "user"); user?.Attributes.ExternalId;
+    // Cvd_Id=FullMessage.data.relationships.devices.data[0].id, //cvd = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "cvd"); //cvd?.Id,
+    // Tablet_Serial=FullMessage.data.relationships.devices.data[1].attributes.serial, //tablet = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "tablet"); //tablet?.Attributes?.Serial
     //////////////////////
     Event=tostring(FullMessage.data.attributes.event),
     Logged_At_UTC=todatetime(FullMessage.data.attributes.logged_at),
@@ -115,7 +134,7 @@ rawplatsci
     Timestamp=todatetime(FullMessage.meta.timestamp),
     Ignore_Data_Flag=iff(todecimal(FullMessage.data.attributes.odometer)>0,false, true), //!(odometer > 0) ... means “not (odometer is greater than 0)”. In other words, it will evaluate to true if odometer is less than or equal to 0, and false if odometer is greater than 0.
     ETL_Load_Date_MT=datetime_utc_to_local(ingestion_time(), 'US/Mountain'),
-    ETL_DW_PubRF_Load_Date=ingestion_time(), //need clarification
+    ETL_DW_PubRF_Load_Date=ingestion_time(), 
     GPS_State=extract(@"[A-Z]{2}$", 0, tostring(FullMessage.data.attributes.location.description))
 | project-away FullMessage
 }
@@ -142,3 +161,8 @@ datatable(RawData: dynamic)
     MessageType=tostring(RawData.MessageType)
 | sort by isnull(true)
 | extend id=tolong(maxid+row_number())
+
+
+
+.show function fn_sbt_TrailerLocations
+
