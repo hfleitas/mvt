@@ -1,0 +1,109 @@
+platsci_TelematicHeartbeats
+// | summarize max(Logged_At_UTC) //2024-07-19T03:55:57Z
+| summarize count() by bin(Logged_At_UTC,1m)
+
+
+platsci_TelematicHeartbeats
+| where Logged_At_UTC >= ago(7d)
+| summarize count() by bin(Logged_At_UTC,1m)
+| order by Logged_At_UTC asc
+| render timechart 
+// ~ 2024-07-16T04:24:00Z
+
+
+
+7ad05634-bdba-4545-8bf5-46152f7d3b5c
+87a37f69-ef23-441b-b671-b90fe6400a52
+23c9ae8b-eb50-4eb1-b537-46863a26971f
+bc71e7dd-7960-4e3f-a5b1-d1ca95cca66b
+
+.append async platsci_TelematicHeartbeats with (tags='["append 2024-07-19"]') <|
+let maxid=toscalar(platsci_TelematicHeartbeats | summarize max(TelematicHeartbeats_ID)); //to increment TelematicHeartbeats_ID
+rawplatsci
+| where ingestion_time() between (startofday(datetime(2024-07-19)) .. endofday(datetime(2024-07-19)))
+| project todynamic(FullMessage)
+| order by isnull(true) //must sort for row_number()
+| extend 
+    TelematicHeartbeats_ID=tolong(maxid+row_number()),
+    Data_Id=tostring(FullMessage.data.id)
+| mv-apply data=FullMessage.data.relationships.assets.data to typeof(dynamic) on
+(
+    project 
+        Unit_Number=case(data.type == "power_unit", data.attributes.external_id, dynamic(null)),
+        Unit_VIN=case(data.type == "power_unit", data.attributes.hardware_id, dynamic(null))
+    | summarize take_any(tostring(Unit_Number)), take_any(tostring(Unit_VIN))
+)
+| mv-apply data=FullMessage.data.relationships.users.data to typeof(dynamic) on
+(
+    project Driver_Code=case(data.type == "user", data.attributes.external_id, dynamic(null))
+    | summarize take_any(tostring(Driver_Code))
+)
+| mv-apply data=FullMessage.data.relationships.devices.data to typeof(dynamic) on
+(
+    project 
+        Cvd_Id=case(data.type == "cvd", data.id, dynamic(null)),
+        Tablet_Serial=case(data.type == "tablet", data.attributes.serial, dynamic(null))
+    | summarize take_any(tostring(Cvd_Id)), take_any(tostring(Tablet_Serial))
+)
+| extend
+    Event=tostring(FullMessage.data.attributes.event),
+    Logged_At_UTC=todatetime(FullMessage.data.attributes.logged_at),
+    Logged_At_MT=datetime_utc_to_local(todatetime(FullMessage.data.attributes.logged_at), 'US/Mountain'),
+    Heartbeat_Id=tostring(FullMessage.data.attributes.heartbeat_id),
+    Speed=todecimal(FullMessage.data.attributes.speed),
+    Odometer=todecimal(FullMessage.data.attributes.odometer),
+    Odometer_Jump=todecimal(FullMessage.data.attributes.odometer_jump),
+    Heading=toint(FullMessage.data.attributes.heading),
+    Ignition=tobool(FullMessage.data.attributes.ignition),
+    RPM=todecimal(FullMessage.data.attributes.rpm),
+    Engine_Hours=todecimal(FullMessage.data.attributes.engine_hours),
+    Engine_Hours_Jump=todecimal(FullMessage.data.attributes.engine_hours_jump),
+    Wheels_In_Motion=tobool(FullMessage.data.attributes.wheels_in_motion),
+    Accuracy=todecimal(FullMessage.data.attributes.accuracy),
+    Satellites=toint(FullMessage.data.attributes.satellites),
+    GPS_Valid=tobool(FullMessage.data.attributes.gps_valid),
+    HDOP=toint(FullMessage.data.attributes.hdop),
+    Fuel_Level=todecimal(FullMessage.data.attributes.fuel_level),
+    Total_Fuel_Used=todecimal(FullMessage.data.attributes.total_fuel_used),
+    GPS_Latitude=todecimal(FullMessage.data.attributes.location.latitude),
+    GPS_Longitude=todecimal(FullMessage.data.attributes.location.longitude),
+    GPS_Description=tostring(FullMessage.data.attributes.location.description),
+    GPS_GeoPoint=strcat('POINT (',tostring(FullMessage.data.attributes.location.longitude),' ',tostring(FullMessage.data.attributes.location.latitude),')'), //POINT (-106.292644 31.702925),
+    Message_Id=tostring(FullMessage.meta.message_id),
+    Consumer_Version=tostring(FullMessage.meta.consumer_version),
+    Origin_Version=tostring(FullMessage.meta.origin_version),
+    Timestamp=todatetime(FullMessage.meta.timestamp),
+    Ignore_Data_Flag=iff(todecimal(FullMessage.data.attributes.odometer)>0,false, true), //!(odometer > 0) ... means “not (odometer is greater than 0)”. In other words, it will evaluate to true if odometer is less than or equal to 0, and false if odometer is greater than 0.
+    ETL_Load_Date_MT=datetime_utc_to_local(ingestion_time(), 'US/Mountain'),
+    ETL_DW_PubRF_Load_Date=ingestion_time(), 
+    GPS_State=extract(@"[A-Z]{2}$", 0, tostring(FullMessage.data.attributes.location.description))
+| project-away FullMessage
+
+
+.show operations | where StartedOn > ago(5m)
+
+51a4b7f7-252d-44d2-837e-8a7303e81765
+c1c83c8a-a082-40c1-b1cf-4691b3a9ccd9
+? 7/18
+a10381e3-6bc1-44b9-8070-0de83e6ccb5a
+
+
+
+.show operations | where OperationId in(
+'7ad05634-bdba-4545-8bf5-46152f7d3b5c',
+'87a37f69-ef23-441b-b671-b90fe6400a52',
+'23c9ae8b-eb50-4eb1-b537-46863a26971f',
+'bc71e7dd-7960-4e3f-a5b1-d1ca95cca66b')
+| summarize dcount(OperationId) by State //4 inprogress & completed 😁
+
+
+.show table platsci_TelematicHeartbeats extents 
+| where isnotempty(Tags)
+
+
+platsci_TelematicHeartbeats
+| where Logged_At_UTC > datetime('7/16/2024')
+| extend t=extent_tags()
+| where t has 'append'
+| summarize count() by tostring(t)
+| summarize sum(count_), sum(array_length(todynamic(t))) //1875738rows 4d! 😁
