@@ -97,14 +97,6 @@ rawplatsci
     | summarize take_any(tostring(Cvd_Id)), take_any(tostring(Tablet_Serial))
 )
 | extend
-    //////////////////////
-    //changed to mv-apply//
-    // Unit_Number=FullMessage.data.relationships.assets.data[0].attributes.external_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.ExternalId,
-    // Unit_VIN=FullMessage.data.relationships.assets.data[0].attributes.hardware_id, //powerUnit = message.Data.Relationships.Assets.Data.FirstOrDefault(d => d.Type == "power_unit"); //powerUnit?.Attributes.HardwareId,
-    // Driver_Code=FullMessage.data.relationships.users.data[0].attributes.external_id, //user = message.Data.Relationships.Users.Data.FirstOrDefault(d => d.Type == "user"); user?.Attributes.ExternalId;
-    // Cvd_Id=FullMessage.data.relationships.devices.data[0].id, //cvd = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "cvd"); //cvd?.Id,
-    // Tablet_Serial=FullMessage.data.relationships.devices.data[1].attributes.serial, //tablet = message.Data.Relationships.Devices.Data.FirstOrDefault(d => d.Type == "tablet"); //tablet?.Attributes?.Serial
-    //////////////////////
     Event=tostring(FullMessage.data.attributes.event),
     Logged_At_UTC=todatetime(FullMessage.data.attributes.logged_at),
     Logged_At_MT=datetime_utc_to_local(todatetime(FullMessage.data.attributes.logged_at), 'US/Mountain'),
@@ -140,7 +132,7 @@ rawplatsci
 }
 
 
-// IDENTITY
+// IDENTITY - Sample
 let target=datatable(id:long) //, Timestamp:datetime, DeviceId:string, MessageType:string)[
 [
     1,
@@ -163,6 +155,27 @@ datatable(RawData: dynamic)
 | extend id=tolong(maxid+row_number())
 
 
+.show functions 
 
-.show function fn_sbt_TrailerLocations
+.show table * policy update
 
+// UPDATE POLICY
+.alter table platsci_TelematicHeartbeats policy update
+```
+[
+  {
+    "IsEnabled": true,
+    "Source": "rawplatsci",
+    "Query": "fn_platsci_TelematicHeartbeats",
+    "IsTransactional": false,
+    "PropagateIngestionProperties": true,
+    "ManagedIdentity": null
+  }
+]
+```
+
+platsci_TelematicHeartbeats
+| where ingestion_time() >=ago(1m)
+
+
+.show ingestion failures | where OriginatesFromUpdatePolicy == true
