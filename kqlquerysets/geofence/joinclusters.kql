@@ -1,0 +1,229 @@
+let join_level = 5;
+cluster('help').database('Samples').US_States
+| project State = features.properties.NAME, polygon = features.geometry
+| extend covering = geo_polygon_to_s2cells(polygon, join_level)
+| mv-expand covering to typeof(string)
+| join kind = inner hint.strategy = broadcast
+(
+    cluster('help').database('Samples').StormEvents
+    | project BeginLon, BeginLat, EventType
+    | extend covering = geo_point_to_s2cell(BeginLon, BeginLat, join_level)
+) on covering
+| where geo_point_in_polygon(BeginLon, BeginLat, polygon)
+| summarize any(BeginLon, BeginLat), count() by EventType
+| render piechart with (kind=map)
+
+
+
+let level = 5;
+DimCustomerLocations
+| where ValidTillUtc > now() or isempty(ValidTillUtc) //active
+| parse Polygon with * "MULTIPOLYGON (((" coordinates_str ")" *
+| extend coordinates_str = replace_string(coordinates_str, ", ", "],[")
+| extend coordinates_str = replace_string(coordinates_str, " ", ",")
+| extend coordinates_str = strcat("[[", coordinates_str, "]]")
+| project CustomerCode, polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}")) //24863 polygons
+//cluster
+| extend covering = geo_polygon_to_s2cells(polygon, join_level)
+| mv-expand covering to typeof(string)
+| join kind = inner hint.strategy = broadcast
+(
+    skybitz_TrailerLocations
+    | summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid //7236 assets
+    | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, join_level)
+) on covering
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, polygon)
+| summarize take_any(sbt_longitude, sbt_latitude), count() by sbt_assetid, CustomerCode //357283 records
+
+
+
+
+let Level = 6;
+let polygons = materialize(
+    cluster('help').database('Samples').US_States
+    | project StateName = tostring(features.properties.NAME), polygon = features.geometry, id = new_guid());
+let tmp = 
+    polygons
+    | project id, covering = geo_polygon_to_s2cells(polygon, Level) 
+    | mv-expand covering to typeof(string)
+    | join kind=inner hint.strategy=broadcast
+            (
+                cluster('help').database('Samples').StormEvents
+                | project lng = BeginLon, lat = BeginLat
+                | project lng, lat, covering = geo_point_to_s2cell(lng, lat, Level)
+            ) on covering
+    | project-away covering, covering1;
+tmp | lookup polygons on id
+| project-away id
+| where geo_point_in_polygon(lng, lat, polygon)
+| summarize StormEventsCountByState = count() by StateName
+
+
+
+.drop table CustomerPolygons
+
+.set-or-replace CustomerPolygons <|
+    DimCustomerLocations
+    | where ValidTillUtc > now() or isempty(ValidTillUtc) //active
+    | parse Polygon with * "MULTIPOLYGON (((" coordinates_str ")" *
+    | extend coordinates_str = replace_string(coordinates_str, ", ", "],[")
+    | extend coordinates_str = replace_string(coordinates_str, " ", ",")
+    | extend coordinates_str = strcat("[[", coordinates_str, "]]")
+    | project CustomerCode, Polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}"))
+    | where isnotnull(geo_point_in_polygon(1,1, Polygon)) //only valid polygons
+    | summarize CustomerCode=make_list(CustomerCode) by tostring(Polygon)
+    | project CustomerCode, Polygon=todynamic(Polygon)
+    // | count //18665
+    
+
+let Level = 8; //6 t7.2031250, , 7 = 5.9375000, 8 = 5.187500
+let polygons = materialize (CustomerPolygons | extend id=new_guid());
+let tmp = 
+    polygons
+    // | project id, polygon = geo_polygon_simplify(polygon) // only if every centimiter has a point in polygon, not needed in this case are small polygons, buildings, etc.
+    | project id, covering = geo_polygon_to_s2cells(Polygon, Level) // precal to Polygon table.
+    // | project len=array_length(covering) //3-1.001 if under 10 is optimal, less is better. The more cells per polygon the higher cost for join due to expand/exploding per cell.
+    | mv-expand covering to typeof(string)
+    | join kind=inner hint.strategy=broadcast
+            (
+                skybitz_TrailerLocations 
+                | summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid //7236 assets //replace with matview.
+                | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, Level) // precal to telemetry table.
+            ) on covering
+    | project-away covering, covering1;
+tmp
+| lookup polygons on id
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
+| project-away id
+// | summarize count() by atloc
+// | summarize count() by sbt_assetid
+// | where sbt_assetid =='5634'
+// | count //6 = 3883, 8 = 3880, 7 = 3883
+// | where sbt_assetid =='8872'
+
+// QGIS or geojson.io to fix 58 invalid polygons
+
+//arrival vs departure
+// | sort by Timestamp asc
+// | extend timeDiffInMilliseconds = datetime_diff('millisecond', Timestamp, prev(Timestamp, 1))
+// telemetry > kqlfunction for geofencing > derived target table > arrival/departure (function) that unions or left join to telemetry for not in polygon
+
+
+// use-case:
+// departed/onroad>arrived atloc (in geofence), 
+// atloc>departed (if current not in geofence/arrived and prev state was at customer, then departed, 
+// else intransit/departed
+
+///////////
+// Final //
+///////////
+let Level = 8; 
+let polygons = materialize (CustomerPolygons | extend id=new_guid());
+let tmp = 
+    polygons
+    | project id, covering = geo_polygon_to_s2cells(Polygon, Level) // precal to Polygon table.
+    | mv-expand covering to typeof(string)
+    | join kind=inner hint.strategy=broadcast
+            (
+                skybitz_TrailerLocations 
+                | summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid //7236 assets //replace with matview.
+                | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, Level) // precal to telemetry table.
+            ) on covering
+    | project-away covering, covering1;
+let arrival=tmp
+| lookup polygons on id
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
+| summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
+| extend geofence='arrival';
+let departed=skybitz_TrailerLocations
+| where sbt_assetid !in (arrival | distinct sbt_assetid)
+| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
+| extend geofence='departed';
+union arrival, departed
+
+
+
+//matview
+//https://learn.microsoft.com/en-us/azure/data-explorer/kusto/management/materialized-views/materialized-view-create#backfill-a-materialized-view
+//Cannot create materialized view 'sbt_TrailerLocationsGeofence': Materialized Views query can only contain a table reference and a single summarize operator which must be last (T | where ... | summarize agg1(), agg2()... aggN() by dimension1 ... dimensionM.
+.create async ifnotexists materialized-view with (
+    backfill=true,
+    effectiveDateTime=datetime(2024-07-29),
+    folder='skybitz',
+    dimensionTables = dynamic(["CustomerPolygons"])
+    ) 
+    sbt_TrailerLocationsGeofence on table skybitz_TrailerLocations
+{
+let Level = 8; 
+let polygons = materialize (CustomerPolygons | extend id=new_guid());
+let tmp = 
+    polygons
+    | project id, covering = geo_polygon_to_s2cells(Polygon, Level) // precal to Polygon table.
+    | mv-expand covering to typeof(string)
+    | join kind=inner hint.strategy=broadcast
+            (
+                skybitz_TrailerLocations 
+                | summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid //7236 assets //replace with matview.
+                | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, Level) // precal to telemetry table.
+            ) on covering
+    | project-away covering, covering1;
+let arrival=tmp
+| lookup polygons on id
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
+| summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
+| extend geofence='arrival';
+let departed=skybitz_TrailerLocations
+| where sbt_assetid !in (arrival | distinct sbt_assetid)
+| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
+| extend geofence='departed';
+union arrival, departed
+}
+
+.show operations | where OperationId ==guid(5339b549-3eb3-4714-88db-e6b326820f64)
+
+
+skybitz_TrailerLocations
+| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
+| count
+
+
+
+// scan - sample
+let Events = datatable (Ts: timespan, Event: string) [
+    0m, "A",
+    1m, "Start",
+    2m, "B",
+    3m, "D",
+    4m, "Stop",
+    6m, "C",
+    8m, "Start",
+    11m, "E",
+    12m, "Stop"
+]
+;
+Events
+| sort by Ts asc
+| scan with_match_id=m_id with 
+(
+    step s1: Event == "Start";
+    step s2: Event != "Start" and Event != "Stop" and Ts - s1.Ts <= 5m;
+    step s3: Event == "Stop" and Ts - s1.Ts <= 5m;
+)
+
+
+
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst > datetime_utc_to_local(ago(14d),'US/Mountain')
+// | where sbt_assetid <> 'n/a' 
+| where isnotempty(sbt_latitude) and isnotempty(sbt_longitude)
+| sort by sbt_assetid, sbt_messagetimestampmst asc
+| scan declare (prevLat:decimal, prevLon:decimal) with 
+(
+    step s1: true;
+    step s2: sbt_assetid==s1.sbt_assetid => prevLat=s1.sbt_latitude, prevLon=s1.sbt_longitude;
+)
+| order by sbt_assetid, sbt_messagetimestampmst
+| project sbt_assetid, sbt_messagetimestampmst, prevLat, sbt_latitude, prevLon, sbt_longitude
+| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
+| summarize countif(isempty( prevLat)), countif(isnotempty(prevLat))
+
