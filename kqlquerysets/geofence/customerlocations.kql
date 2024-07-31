@@ -1,0 +1,67 @@
+.rename table DimCustomerLocations2 to DimCustomerLocations
+
+
+let mvtep = toscalar(
+DimCustomerLocations
+| where CustomerCode =='MVTEP'
+| where isempty(ValidTillUtc) == true
+| parse Polygon with * "MULTIPOLYGON (((" coordinates_str ")" *
+| extend coordinates_str = replace_string(coordinates_str, ", ", "],[")
+| extend coordinates_str = replace_string(coordinates_str, " ", ",")
+| extend coordinates_str = strcat("[[", coordinates_str, "]]")
+| project polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}"))
+);
+skybitz_TrailerLocations
+| summarize arg_max(sbt_messagetimestampmst, *) by sbt_assetid
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, mvtep) == true
+
+
+
+// https://learn.microsoft.com/en-us/azure/data-explorer/kusto/query/tutorials/create-geospatial-visualizations?context=%2Ffabric%2Fcontext%2Fcontext-rti&pivots=fabric#find-anomalies-based-on-geospatial-data
+// sample
+let stateOfInterest = "Texas";
+let statePolygon = materialize(
+    cluster('help').database('Samples').US_States 
+    | extend name = tostring(features.properties.NAME)
+    // | where name == "Texas" //stateOfInterest
+    | project geometry=features.geometry
+    );
+// let stateCoveringS2cells = statePolygon
+//     | project s2Cells = geo_polygon_to_s2cells(geometry, 9);
+cluster('help').database('Samples').StormEvents
+// | extend s2Cell = geo_point_to_s2cell(BeginLon, BeginLat, 9)
+// | where s2Cell in (stateCoveringS2cells)
+| where geo_point_in_polygon(BeginLon, BeginLat, toscalar(statePolygon))
+| make-series damage = avg(DamageProperty + DamageCrops) default = double(0.0) on StartTime step 7d
+| extend anomalies=series_decompose_anomalies(damage)
+| render anomalychart with (anomalycolumns=anomalies)
+
+
+let loc = materialize (
+    DimCustomerLocations 
+    | where ValidTillUtc > now() or isempty(ValidTillUtc) //active locations
+    | parse Polygon with * "MULTIPOLYGON (((" coordinates_str ")" *
+    | extend coordinates_str = replace_string(coordinates_str, ", ", "],[")
+    | extend coordinates_str = replace_string(coordinates_str, " ", ",")
+    | extend coordinates_str = strcat("[[", coordinates_str, "]]")
+    | project polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}"))
+);
+skybitz_TrailerLocations
+| summarize arg_max(sbt_messagetimestampmst, *) by sbt_assetid
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, toscalar(loc)) == true
+
+
+
+
+let loc = materialize(
+    DimCustomerLocations 
+    | where ValidTillUtc > now() or isempty(ValidTillUtc) //active locations
+    | parse Polygon with * "MULTIPOLYGON (((" coordinates_str ")" *
+    | extend coordinates_str = replace_string(coordinates_str, ", ", "],[")
+    | extend coordinates_str = replace_string(coordinates_str, " ", ",")
+    | extend coordinates_str = strcat("[[", coordinates_str, "]]")
+    | project polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}"))
+);
+skybitz_TrailerLocations
+| summarize arg_max(sbt_messagetimestampmst, *) by sbt_assetid
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, toscalar(loc)) == true
