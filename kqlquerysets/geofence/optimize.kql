@@ -8,13 +8,14 @@ DimCustomerLocations
 | extend coordinates_str = replace_string(coordinates_str, " ", ",")
 | extend coordinates_str = strcat("[[", coordinates_str, "]]")
 | project CustomerCode, Polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}"))
-| where isnotnull(geo_point_in_polygon(1,1, Polygon)) //only valid polygons
+| where isnotnull(geo_point_in_polygon(1,1, Polygon)) //58 only valid polygons
 | summarize CustomerCode=make_list(CustomerCode) by tostring(Polygon)
 | project CustomerCode, Polygon=todynamic(Polygon), covering = geo_polygon_to_s2cells(todynamic(Polygon), 8)
 
 
+
 .create async materialized-view with (
-    backfill = true,
+    backfill = true,    
     folder ='skybitz'
     )
     sbt_LatestAssetLocation on table skybitz_TrailerLocations 
@@ -26,8 +27,10 @@ skybitz_TrailerLocations
 .show operations | where OperationId ==guid(9d2c3b95-0dac-495d-9fcc-8d0b24226f1d)
 
 
+.create function with(folder='skybitz') sbt_geofence()
+{
 let Level = 8; 
-let polygons = materialize (CustomerPolygons | extend id=new_guid());
+let polygons = materialize (CustomerPolygons | project CustomerCode, Polygon, covering);
 let arrival = polygons
 | mv-expand covering to typeof(string)
 | join kind=inner hint.strategy=broadcast
@@ -43,10 +46,23 @@ let departed=sbt_LatestAssetLocation
 | where sbt_assetid !in (arrival | distinct sbt_assetid)
 | extend geofence='departed';
 union arrival, departed
+}
+
+sbt_geofence
 
 
 // AFTER: 
     // Time Execution Time 4.2217139, CPU Total 00:00:10.1718750, Kernel 00:00:01.9062500, User 00:00:08.2656250, Memory Peak per node 1.72GB
     // Time Execution Time 4.1770657, CPU Total 00:00:04.0468750, Kernel 00:00:00.2031250, User 00:00:03.8437500, Memory Peak per node 1.72GB
     // Time Execution Time 3.5693802, CPU Total 00:00:03.5312500, Kernel 00:00:00.0625000, User 00:00:03.4687500, Memory Peak per node 325.19MB
+    // Time Execution Time 3.6602082, CPU Total 00:00:03.5625000, Kernel 00:00:00.0625000, User 00:00:03.5000000, Memory Peak per node 325.39MB
 // BEFORE: Time Execution Time 7.2186434, CPU Total 00:00:26.9062500, Kernel 00:00:05.2031250, User 00:00:21.7031250, Memory Peak per node 2.54GB
+
+
+
+// do platsci next. leverage skybitz example. 
+// push out to service bus (eventhouse > c# / python > service bus) -> PUSH (datashare (leader(cluster 5nodes/follower(cluser 1node)) - pays for their own compute)
+// timeseries of arrival/departure changes do action.
+// jump in LApps - cost.  superseeded Service Connector in Fabric Real-time Hub.
+// service bus > c# Azure Data Explorer (Kusto) SDKs > fabric eventhouse (read/write)
+// data activator (reflex)
