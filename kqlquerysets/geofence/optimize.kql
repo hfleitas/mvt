@@ -17,7 +17,7 @@ DimCustomerLocations
     backfill = true,
     folder ='skybitz'
     )
-    LatestAssetLocation on table skybitz_TrailerLocations 
+    sbt_LatestAssetLocation on table skybitz_TrailerLocations 
 {
 skybitz_TrailerLocations
 | summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
@@ -26,22 +26,27 @@ skybitz_TrailerLocations
 .show operations | where OperationId ==guid(9d2c3b95-0dac-495d-9fcc-8d0b24226f1d)
 
 
-
 let Level = 8; 
 let polygons = materialize (CustomerPolygons | extend id=new_guid());
 let arrival = polygons
 | mv-expand covering to typeof(string)
 | join kind=inner hint.strategy=broadcast
 (
-    LatestAssetLocation
+    sbt_LatestAssetLocation
     | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, Level) // precal to telemetry table.
 ) on covering
 | project-away covering, covering1
 | where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
 | summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
 | extend geofence='arrival';
-let departed=skybitz_TrailerLocations
+let departed=sbt_LatestAssetLocation
 | where sbt_assetid !in (arrival | distinct sbt_assetid)
-| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
 | extend geofence='departed';
 union arrival, departed
+
+
+// AFTER: 
+    // Time Execution Time 4.2217139, CPU Total 00:00:10.1718750, Kernel 00:00:01.9062500, User 00:00:08.2656250, Memory Peak per node 1.72GB
+    // Time Execution Time 4.1770657, CPU Total 00:00:04.0468750, Kernel 00:00:00.2031250, User 00:00:03.8437500, Memory Peak per node 1.72GB
+    // Time Execution Time 3.5693802, CPU Total 00:00:03.5312500, Kernel 00:00:00.0625000, User 00:00:03.4687500, Memory Peak per node 325.19MB
+// BEFORE: Time Execution Time 7.2186434, CPU Total 00:00:26.9062500, Kernel 00:00:05.2031250, User 00:00:21.7031250, Memory Peak per node 2.54GB
