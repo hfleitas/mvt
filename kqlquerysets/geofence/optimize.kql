@@ -1,0 +1,47 @@
+.drop table CustomerPolygons ifexists 
+
+.set-or-replace CustomerPolygons <|
+DimCustomerLocations
+| where ValidTillUtc > now() or isempty(ValidTillUtc) //active
+| parse Polygon with * "MULTIPOLYGON (((" coordinates_str ")" *
+| extend coordinates_str = replace_string(coordinates_str, ", ", "],[")
+| extend coordinates_str = replace_string(coordinates_str, " ", ",")
+| extend coordinates_str = strcat("[[", coordinates_str, "]]")
+| project CustomerCode, Polygon = todynamic(strcat("{\"type\":\"Polygon\", \"coordinates\":[", coordinates_str, "]}"))
+| where isnotnull(geo_point_in_polygon(1,1, Polygon)) //only valid polygons
+| summarize CustomerCode=make_list(CustomerCode) by tostring(Polygon)
+| project CustomerCode, Polygon=todynamic(Polygon), covering = geo_polygon_to_s2cells(todynamic(Polygon), 8)
+
+
+.create async materialized-view with (
+    backfill = true,
+    folder ='skybitz'
+    )
+    LatestAssetLocation on table skybitz_TrailerLocations 
+{
+skybitz_TrailerLocations
+| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
+}
+
+.show operations | where OperationId ==guid(9d2c3b95-0dac-495d-9fcc-8d0b24226f1d)
+
+
+
+let Level = 8; 
+let polygons = materialize (CustomerPolygons | extend id=new_guid());
+let arrival = polygons
+| mv-expand covering to typeof(string)
+| join kind=inner hint.strategy=broadcast
+(
+    LatestAssetLocation
+    | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, Level) // precal to telemetry table.
+) on covering
+| project-away covering, covering1
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
+| summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
+| extend geofence='arrival';
+let departed=skybitz_TrailerLocations
+| where sbt_assetid !in (arrival | distinct sbt_assetid)
+| summarize arg_max(sbt_messagetimestampmst,*) by sbt_assetid
+| extend geofence='departed';
+union arrival, departed
