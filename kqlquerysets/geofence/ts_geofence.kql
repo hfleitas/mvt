@@ -1,0 +1,58 @@
+let Level = 8; 
+let sbt=rawskybitz
+| top 100 by ingestion_time() desc
+| extend payload=parse_xml(data)
+| project-away data
+| extend sbt_mtsn=tostring(payload.skybitz.gls.mtsn), sbt_assetid=tostring(payload.skybitz.gls.asset.assetid),sbt_messagetype=tostring(payload.skybitz.gls.messagetype),ts=tostring(payload.skybitz.gls.['time']),binary=todynamic(payload.skybitz.gls.binary),sbt_extpwr=toint(payload.skybitz.gls.extpwr),serial=todynamic(payload.skybitz.gls.serial),sbt_latitude=todecimal(payload.skybitz.gls.latitude),sbt_longitude=todecimal(payload.skybitz.gls.longitude),sbt_battery=tostring(payload.skybitz.gls.battery),sbt_quality=toint(payload.skybitz.gls.quality),sbt_geoname=tostring(payload.skybitz.gls.landmark.geoname),sbt_city=tostring(payload.skybitz.gls.landmark.city),sbt_state=tostring(payload.skybitz.gls.landmark.state),sbt_country=tostring(payload.skybitz.gls.landmark.country),sbt_geotypename=tostring(payload.skybitz.gls.landmark.geotypename),sbt_idlestatus=tostring(payload.skybitz.gls.idle.idlestatus),sbt_idleduration=todecimal(payload.skybitz.gls.idle.idleduration),sbt_idlegap=todecimal(payload.skybitz.gls.idle.idlegap),sbt_skyfencestatus=tostring(payload.skybitz.gls.skyfence.skyfencestatus),sbt_speed=tostring(payload.skybitz.gls.speed),sbt_heading=tostring(payload.skybitz.gls.heading),sbt_transid=tostring(payload.skybitz.gls.transid),etl_timestampUTC=ingestion_time()
+| parse ts with ts_year:long "/" ts_month:long "/" ts_day:long " " ts_hour:long ":" ts_minute:long ":" ts_second:long
+| extend ts = make_datetime(ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second)
+| extend sbt_messagetimestampmst=datetime_utc_to_local(todatetime(ts), 'US/Mountain')
+| project-away ts, ts_year, ts_month, ts_day, ts_hour, ts_minute, ts_second
+| extend binary = parse_json(case(isnull(array_length(binary)), pack_array(binary), binary))
+| mv-apply binary to typeof(dynamic) on (project sbt_tetherstate=case(binary.inputname == "Tether", binary.inputstate, dynamic(null)), sbt_tirestate=case(binary.inputname == "Tire System", binary.inputstate, dynamic(null))
+    | summarize take_any(tostring(sbt_tetherstate)), take_any(tostring(sbt_tirestate)))
+| extend serial = parse_json(case(isnull(array_length(serial)), pack_array(serial), serial))
+| mv-apply serial to typeof(dynamic) on (project sbt_movementstate=case(serial.serialname == "Motion", serial.serialdata, dynamic(null)), sbt_cargostate=case(serial.serialname == "Cargo" or serial.serialname == "Volumetric", serial.serialdata, dynamic(null))
+    | summarize take_any(tostring(sbt_movementstate)), take_any(tostring(sbt_cargostate)))
+| project sbt_mtsn, sbt_assetid, sbt_messagetype,sbt_messagetimestampmst,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow=toint(0)
+| extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, Level);
+//  sbt | distinct sbt_assetid
+let polygons = materialize (CustomerPolygons | project CustomerCode, Polygon, covering);
+let arrival=sbt
+| lookup (polygons | mv-expand covering to typeof(string)) on covering
+| project-away covering
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
+| summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
+| distinct sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow, tostring(CustomerCode)
+| extend geofence='arrival';
+let departure=sbt
+// | lookup (polygons | mv-expand covering to typeof(string)) on covering
+| project-away covering
+// | where sbt_assetid !in(arrival| distinct sbt_assetid) 
+| join kind=leftanti arrival on sbt_assetid,sbt_messagetimestampmst, //sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,
+sbt_latitude,sbt_longitude //,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
+// | where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)==false
+// | distinct sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow, CustomerCode=''
+| extend geofence='departed';
+union arrival, departure
+// | summarize count() by sbt_assetid
+| where sbt_assetid in(datatable (sbt_assetid: string) [
+    "7902",
+    "4767",
+    "4149",
+    "9112"
+])
+
+
+
+
+//debug
+let bug=datatable (sbt_assetid: string, sbt_messagetimestampmst: datetime, sbt_mtsn: string, sbt_messagetype: string, sbt_tetherstate: string, sbt_tirestate: string, sbt_extpwr: int, sbt_movementstate: string, sbt_cargostate: string, sbt_latitude: decimal, sbt_longitude: decimal, sbt_battery: string, sbt_quality: int, sbt_geoname: string, sbt_city: string, sbt_state: string, sbt_country: string, sbt_geotypename: string, sbt_idlestatus: string, sbt_idleduration: decimal, sbt_idlegap: decimal, sbt_skyfencestatus: string, sbt_speed: string, sbt_heading: string, sbt_transid: string, etl_timestampUTC: datetime, CurrentRow: int, CustomerCode: string, geofence: string) [
+    "10117",datetime(2024-08-03T10:14:04Z),"SHB81JBL233010928","Event","Untether","Okay",int(0),"Moving","Unknown",decimal(30.47692),decimal(-90.46078),"OK",int(0),"PSCHA1","Hammond","LA","US","None","MOVING",decimal(null),decimal(null),"In","0.0","N","2199353643",datetime(2024-08-03T16:15:40.5987709Z),int(0),"[\"PSCHA1\"]","arrival",
+    "10117",datetime(2024-08-03T10:14:04Z),"SHB81JBL233010928","Event","Untether","Okay",int(0),"Moving","Unknown",decimal(30.47692),decimal(-90.46078),"OK",int(0),"PSCHA1","Hammond","LA","US","None","MOVING",decimal(null),decimal(null),"In","0.0","N","2199353643",datetime(2024-08-03T16:15:40.5987709Z),int(0),"","departed",
+    "10117",datetime(2024-08-03T10:15:03Z),"SHB81JBL233010928","Event","Tether","Okay",int(1),"Moving","Unknown",decimal(30.47692),decimal(-90.46078),"OK",int(0),"PSCHA1","Hammond","LA","US","None","MOVING",decimal(null),decimal(null),"In","0.0","N","2199354723",datetime(2024-08-03T16:16:07.2881177Z),int(0),"[\"PSCHA1\"]","arrival",
+    "10117",datetime(2024-08-03T10:16:03Z),"SHB81JBL233010928","Event","Untether","Okay",int(0),"Moving","Unknown",decimal(30.47691),decimal(-90.46081),"OK",int(0),"PSCHA1","Hammond","LA","US","None","MOVING",decimal(null),decimal(null),"In","0.0","NW","2199355354",datetime(2024-08-03T16:16:43.5646535Z),int(0),"[\"PSCHA1\"]","arrival"
+];
+skybitz_TrailerLocations
+| where sbt_messagetimestampmst between ( datetime(2024-08-03T10:14:04Z) .. datetime(2024-08-03T10:16:03Z))
+| where sbt_assetid in (bug| project sbt_assetid)
