@@ -9,6 +9,11 @@
 3. Append hist from raw prior to update policy enabling. 
 4. Create backfilled materialized-view to get latest record by asset.
 
+(Bonus - Optional)
+
+5. Create a Real-Time Dashboard with a map and info.
+6. Set an alert to automate an action.
+
 ## 🪜 Steps 
 
 **Hint:** Fill in the blanks.
