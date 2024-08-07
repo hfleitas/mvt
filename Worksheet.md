@@ -23,7 +23,7 @@
 .set-or-replace <blank> <| fn_sbt_TrailerLocationsGeofence | limit <blank>
 ```
 
-2. Enable the update policy so as data lands on the raw table it gets transformed automatically to the new table.
+2. Enable the update policy so as data lands on the raw table (source table) it gets transformed automatically to the new table (derrived/target table).
 ````kql
 .alter table <blank> policy update
 ```
