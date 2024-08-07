@@ -1,7 +1,8 @@
 # 🤿 Practice Worksheet 
 
 ## 🏅 Objectives
-- Create a derived table with all data from stream transformed in real-time with geofence status and customer code. 
+- Create a derived table with all data from stream transformed in real-time with geofence status and customer code.
+- Automate actions based on insights
 
 ## 📃 Tasks
 1. Create the target table using a limit 0 of the output of the function in .set control command. 
