@@ -19,13 +19,11 @@
 
 **Hint:** Fill in the blanks.
 1. Using kql function `fn_sbt_TrailerLocationsGeofence` create an empty table.
-2. 
 ```kql
 .set-or-replace <blank> <| fn_sbt_TrailerLocationsGeofence | limit <blank>
 ```
 
 2. Enable the update policy so as data lands on the raw table it gets transformed automatically to the new table.
-
 ````kql
 .alter table <blank> policy update
 ```
@@ -40,7 +38,6 @@
 ````
 
 3. Backfill the new table with the hist from raw upto the point before you enabled the update policy.
-
 ```kql
 .append
 | <blank>
@@ -48,7 +45,6 @@
 ```
 
 4. Create a backfilled materialized-view for the current record.
-
 ```kql
 .create materialized-view ...
 {
@@ -63,3 +59,4 @@
 ## 📖 Resources
 - https://aka.ms/fabric-docs-rta
 - https://aka.ms/adx.docs
+- https://aka.ms/realtimeskill
