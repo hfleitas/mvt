@@ -18,12 +18,20 @@
 ## 🪜 Steps 
 
 **Hint:** Fill in the blanks.
-1. Using kql function `fn_sbt_TrailerLocationsGeofence` create an empty table.
+
+### 1. Create Table
+Using kql function `fn_sbt_TrailerLocationsGeofence` create an empty table.
 ```kql
 .set-or-replace <blank> <| fn_sbt_TrailerLocationsGeofence | limit <blank>
 ```
 
-2. Enable the update policy so as data lands on the raw table (source table) it gets transformed automatically to the new table (derrived/target table).
+Validations:
+- leverage `.show tables` to confirm the new table exists.
+- query the table to make sure it exists and that it's empty with the expected schema columns.
+
+
+### 2. Update Policy
+Enable the update policy so as data lands on the raw table (source table) it gets transformed automatically to the new table (derrived/target table).
 ````kql
 .alter table <blank> policy update
 ```
@@ -37,23 +45,36 @@
 ```
 ````
 
-3. Backfill the new table with the hist from raw upto the point before you enabled the update policy.
+Validations:
+- levergage `.show * policy update ` to check the status of your command.
+- query the target table to get a count of rows being inserted by the update policy. 
+
+### 3. Sync Hist
+Backfill the new table with the hist from raw upto the point before you enabled the update policy.
 ```kql
 .append
 | <blank>
 ...
 ```
 
-4. Create a backfilled materialized-view for the current record.
+Validations:
+- levergage `.show operations` to check the status of your command.
+- query the target table to reconsile using a count. 
+
+### 4. Create View
+Create a backfilled materialized-view for the current record.
 ```kql
 .create materialized-view ...
 {
 <blank>
 | summarize arg_max(<blank>,*) by <blank>
 }
-
-.show operations | where operationid==guid(<blank>)
 ```
+
+Validations:
+- leverage `.show operations | where operationid==guid(<blank>)` to monitor the progress of your async command.
+- query the view to verify the count of rows and columns aligns as expected.
+  
 
 ## 🏁 Finished
 ## 📖 Resources
