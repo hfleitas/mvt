@@ -1,8 +1,8 @@
 # 🤿 Practice Worksheet 
 
 ## 🏅 Objectives
-- Create a derived table with all data from stream transformed in real-time with geofence status and customer code.
-- Automate actions based on insights
+- Create a derived table from streaming data that's transformed by a kql function in real-time to persist the geofence output, customer code for arrivals and other columns.
+- Automate actions based on insights (Bonus/Optional)
 
 ## 📃 Tasks
 1. Create the target table using a limit 0 of the output of the function in .set control command. 
