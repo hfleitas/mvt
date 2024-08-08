@@ -1,3 +1,3 @@
-# [Worksheet](../worksheet.md) Answers
+# [Worksheet](../worksheet.md) answers
 
 Keep trying...
