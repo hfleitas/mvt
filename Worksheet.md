@@ -81,3 +81,4 @@ Validations:
 - https://aka.ms/fabric-docs-rta
 - https://aka.ms/adx.docs
 - https://aka.ms/realtimeskill
+- Spoiler: worksheet [anwers](WA.md)
