@@ -4,4 +4,4 @@
 This repo contains scripts or assets created by CMF team for migration to Fabric Real-Time Intelligence.
 
 ## Upskilling
-- [Practice Worksheet](worksheet.md)
+- Practice [worksheet](worksheet.md)
