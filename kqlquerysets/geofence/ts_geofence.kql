@@ -1,6 +1,7 @@
 rawskybitz
 | summarize max(ingestion_time())
 
+
 let Level = 8; 
 let sbt=materialize(rawskybitz
 // | where ingestion_time() between (datetime(2024-08-05T08:00:04Z) .. datetime(2024-08-05T10:16:03Z))
