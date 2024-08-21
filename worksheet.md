@@ -16,8 +16,8 @@
 
 (Bonus/Optional)
 
-5. Create a Real-Time Dashboard with a map and info.
-6. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
+6. Create a Real-Time Dashboard with a map and info.
+7. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
 
 ## 🪜 Steps 
 
