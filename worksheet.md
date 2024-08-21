@@ -11,8 +11,7 @@
 4. Append from previous transformed table carrying over the extents creationTime.
 5. Create backfilled materialized-view to get latest record by asset.
 
-![image](https://github.com/user-attachments/assets/d7bca769-06e2-42fb-a12d-00acd050e1d3)
-
+![image](https://github.com/user-attachments/assets/3f57f274-4184-4e42-9e9e-efe64b65edbc)
 
 (Bonus/Optional)
 
