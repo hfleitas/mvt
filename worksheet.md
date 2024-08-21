@@ -49,13 +49,16 @@ Enable the update policy so as data lands on the raw table (source table) it get
 ```
 ````
 
-Disable the update policy policy on the previous transformed table to avoid duplicates on the next step. 
-
 ✅ Validations:
 - levergage `.show * policy update ` to check the status of your command.
 - query the target table to get a count of rows being inserted by the update policy. 
 
-### 3. Sync Hist
+
+### 3. Update Policy - disable
+Disable the update policy policy on the previous transformed table to avoid duplicates on the next step. 
+
+
+### 4. Sync Hist
 Backfill the new table with the hist from raw upto the point before you enabled the update policy.
 ```kql
 .set-or-append <blank> with(<blank>='<blank>') <|
@@ -96,7 +99,7 @@ union arrival, departure
 - query the target table to reconsile using a count.
 - See more hints in [syncagain.kql](kqlquerysets/skybitz/syncagain.kql) file.
 
-### 4. Create View
+### 5. Create View
 Create a backfilled materialized-view for the current record.
 ```kql
 .create materialized-view ...
