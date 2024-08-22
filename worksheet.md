@@ -95,7 +95,7 @@ union arrival, departure
 
 ✅ Validations:
 - levergage `.show operations` to check the status of your command.
-- query the target table to reconsile using a count.
+- query the target table to reconcile using a count.
 - See more hints in [syncagain.kql](kqlquerysets/skybitz/syncagain.kql) file.
 
 ### 5. Create View
