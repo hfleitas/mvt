@@ -49,7 +49,7 @@ Enable the update policy so as data lands on the raw table (source table) it get
 ````
 
 ✅ Validations:
-- levergage `.show * policy update ` to check the status of your command.
+- levergage `.show table * policy update ` to check the status of your command.
 - query the target table to get a count of rows being inserted by the update policy. 
 
 
