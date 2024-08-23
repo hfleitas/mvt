@@ -1,0 +1,32 @@
+// original
+.set-or-append async TrailerLocationsTest with(creationTime='2021-09-30 23:59:59.9990') <|
+let sbt=materialize(skybitz_TrailerLocations
+| where extent_id() == guid(9142fc9c-d9d3-4596-92aa-2bda40839e64)
+| extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, 8));
+let polygons = materialize (CustomerPolygons | project CustomerCode, Polygon, covering);
+let arrival=sbt
+| lookup (polygons | mv-expand covering to typeof(string)) on covering
+| project-away covering
+| where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon)
+| summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow //,geofence
+| distinct sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow, tostring(CustomerCode) //,geofence
+| extend geofence='arrival';
+let departure=sbt
+| project-away covering
+| join kind=leftanti arrival on sbt_assetid,sbt_messagetimestampmst, sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow
+| extend geofence='departed';
+union arrival, departure
+
+
+// testing concatination
+let a=@".set-or-append async TrailerLocationsTest with(creationTime='";
+let b=@"') <| let sbt=materialize(skybitz_TrailerLocations | where extent_id() == guid(";
+let c=@") | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, 8)); let polygons = materialize (CustomerPolygons | project CustomerCode, Polygon, covering); let arrival=sbt | lookup (polygons | mv-expand covering to typeof(string)) on covering | project-away covering | where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon) | summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow | distinct sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow, tostring(CustomerCode) | extend geofence='arrival'; let departure=sbt | project-away covering | join kind=leftanti arrival on sbt_assetid,sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow | extend geofence='departed'; union arrival, departure";
+print strcat(a,b,c)
+
+
+// generate commands
+.show table skybitz_TrailerLocations extents 
+| sort by MaxCreatedOn asc
+| project ExtentId, RowCount, MaxCreatedOn
+| extend strcat(@".set-or-append async TrailerLocationsTest with(creationTime='",MaxCreatedOn,@"') <| let sbt=materialize(skybitz_TrailerLocations | where extent_id() == guid(",ExtentId,@") | extend covering = geo_point_to_s2cell(sbt_longitude, sbt_latitude, 8)); let polygons = materialize (CustomerPolygons | project CustomerCode, Polygon, covering); let arrival=sbt | lookup (polygons | mv-expand covering to typeof(string)) on covering | project-away covering | where geo_point_in_polygon(sbt_longitude, sbt_latitude, Polygon) | summarize CustomerCode=make_list(CustomerCode) by sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow | distinct sbt_assetid, sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow, tostring(CustomerCode) | extend geofence='arrival'; let departure=sbt | project-away covering | join kind=leftanti arrival on sbt_assetid,sbt_messagetimestampmst,sbt_mtsn,sbt_messagetype,sbt_tetherstate,sbt_tirestate,sbt_extpwr,sbt_movementstate,sbt_cargostate,sbt_latitude,sbt_longitude,sbt_battery,sbt_quality,sbt_geoname,sbt_city,sbt_state,sbt_country,sbt_geotypename,sbt_idlestatus,sbt_idleduration,sbt_idlegap,sbt_skyfencestatus,sbt_speed,sbt_heading,sbt_transid,etl_timestampUTC,CurrentRow | extend geofence='departed'; union arrival, departure")
