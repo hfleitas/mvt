@@ -129,4 +129,7 @@ Create a backfilled materialized-view for the current record.
 - https://aka.ms/fabric-docs-rta
 - https://aka.ms/adx.docs
 - https://aka.ms/realtimeskill
-###### ⚠️ Spoiler Alert ⚠️: [worksheet answers](kqlquerysets/wa.md)
+
+## Bonus/Optional
+6. Create a Real-Time Dashboard with a map and info.
+7. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
