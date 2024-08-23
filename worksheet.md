@@ -132,4 +132,12 @@ Create a backfilled materialized-view for the current record.
 
 ## Bonus/Optional
 6. Create a Real-Time Dashboard with a map and info.
-7. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
+```kql
+<blank>
+...
+| project label=strcat(sbt_assetid,': ',geofence,' at ', tostring(sbt_messagetimestampmst), CustomerCode), sbt_assetid, geofence, CustomerCode, sbt_longitude=toreal(sbt_longitude), sbt_latitude=toreal(sbt_latitude)
+| where (isnotempty(sbt_longitude) or isnotempty(sbt_latitude)) //and sbt_assetid =='5310' 
+| render scatterchart with (kind=map)
+```
+
+8. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
