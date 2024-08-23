@@ -95,6 +95,8 @@ union arrival, departure
 
 ✅ Validations:
 - levergage `.show operations` to check the status of your command.
+- use `.show table <blank> extents` & `strcat()` to automate the async commands for all extents. ie. [scriptedappend.kql](kqlquerysets/skybitz/scriptedappend.kql)
+- use `.show table <blank> extents` for both tables to reconcile `RowCount` per extent & matching `MaxCreatedOn`.
 - query the target table to reconcile using a count.
 - See more hints in [syncagain.kql](kqlquerysets/skybitz/syncagain.kql) file.
 
@@ -108,7 +110,16 @@ Create a backfilled materialized-view for the current record.
 }
 ```
 
+👀 Hint
+```
+// lookup the documentation for materialized-views. 
+
+// look at the Query
+.show materialized-views
+```
+
 ✅ Validations:
+- see syntax [example](https://github.com/hfleitas/mvt/blob/5cce0ed86feab91c1913b8e4a28432978e69cb1b/kqlquerysets/geofence/optimize.kql#L17) for backfill & more. 
 - leverage `.show operations | where operationid==guid(<blank>)` to monitor the progress of your async command.
 - query the view to verify the count of rows and columns aligns as expected.
   
