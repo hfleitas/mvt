@@ -103,7 +103,7 @@ union arrival, departure
 ### 5. Create View
 Create a backfilled materialized-view for the current record.
 ```kql
-.create materialized-view ...
+.create materialized-view with (<blank>=<blank>, <blank>='<blank>') <blank> on <blank>
 {
 <blank>
 | summarize arg_max(<blank>,*) by <blank>
