@@ -107,6 +107,7 @@ union arrival, departure
 - use `.show table <blank> extents` for both tables to reconcile `RowCount` per extent & matching `MaxCreatedOn`.
 - query the target table to reconcile using a count.
 - See more hints in [syncagain.kql](kqlquerysets/skybitz/syncagain.kql) file.
+- See [Ingestion properties](https://learn.microsoft.com/kusto/ingestion-properties)
 
 ### 5. Create View
 Create a backfilled materialized-view for the current record.
