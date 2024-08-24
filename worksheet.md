@@ -17,7 +17,11 @@
 
 ![image](https://github.com/user-attachments/assets/3f57f274-4184-4e42-9e9e-efe64b65edbc)
 
-(Bonus/Optional)
+### Legend
+- 🟦 blue means existing items.
+- 🟩 green are new items you'll create while completing this worksheet.
+
+### Bonus/Optional
 
 6. Create a Real-Time Dashboard with a map and info.
 7. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
