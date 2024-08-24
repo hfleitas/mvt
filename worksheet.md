@@ -1,5 +1,10 @@
 # 🤿 Practice Worksheet 
 
+### Pre-reqs
+- Must have at least contributor access to the Fabric Workspace where the data resides and a Fabric license (ie. Trial/etc). 
+- Read the [Fabric Eventhouse Overview](https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse).
+- Read the [Create KQL Queryset](https://learn.microsoft.com/en-us/fabric/real-time-intelligence/create-query-set) guide.
+
 ## 🏅 Objectives
 - Create a derived table from streaming data that's transformed by a kql function in real-time to persist the geofence output, customer code for arrivals and other columns.
 - Automate actions based on insights (Bonus/Optional)
@@ -112,7 +117,7 @@ Create a backfilled materialized-view for the current record.
 
 👀 Hint
 ```
-// lookup the documentation for materialized-views. 
+// lookup the documentation for kql materialized-views. 
 
 // look at the Query
 .show materialized-views
