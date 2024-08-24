@@ -1,7 +1,6 @@
 # 🤿 Practice Worksheet 
-
-### Pre-reqs
-- Must have at least contributor access to the Fabric Workspace where the data resides and a Fabric license (ie. Trial/etc). 
+## Pre-reqs
+- Must have at least contributor access to the Fabric workspace where the data resides and a Fabric license (ie. Trial/etc). 
 - Read the [Fabric Eventhouse Overview](https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse).
 - Read the [Create KQL Queryset](https://learn.microsoft.com/en-us/fabric/real-time-intelligence/create-query-set) guide.
 
