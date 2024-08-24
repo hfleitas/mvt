@@ -148,4 +148,4 @@ Create a backfilled materialized-view for the current record.
 | render scatterchart with (kind=map)
 ```
 
-8. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
+7. Set an alert to automate an action, such as send a message when the truck/asset is running "late".
